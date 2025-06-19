@@ -1,0 +1,48 @@
+# Vagrant
+.vagrant/
+*.box
+
+# Ansible
+*.retry
+*.log
+inventory/*
+!inventory/hosts  # Keep your example/default inventory
+group_vars/*.vault.yml
+
+# Stable Diffusion
+models/
+outputs/
+checkpoints/
+*.safetensors
+*.ckpt
+
+# System / IDE
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+ehthumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+
+# VSCode
+.vscode/
+.settings/
+
+# Token/config secrets
+*.token
+*.pem
+*.key
+*.crt
+*.creds
+secrets.yml
+
+# OS specific
+*.bak
+*.tmp
+

@@ -1,0 +1,31 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "generic/rhel9"
+  config.vm.hostname = "rhel9-vagrant"
+  
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "rhel9-vagrant" # Add this line
+    vb.memory = 4096
+    vb.cpus = 2
+  end
+
+  # Share your repo directory (optional)
+  config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+  config.vm.synced_folder "../shared", "/mnt/shared"
+
+  # Register with Red Hat Subscription Manager using activation key and org
+  config.vm.provision "shell",
+    env: {
+      RHSM_ORG: ENV['RHSM_ORG'],
+      RHSM_KEY: ENV['RHSM_KEY']
+    },
+    inline: <<-SHELL
+      echo "Registering system with Red Hat using activation key..."
+      echo "Org: ${RHSM_ORG}"
+      echo "Activation Key: ${RHSM_KEY}"
+      subscription-manager register \
+        --org="${RHSM_ORG}" \
+        --activationkey="${RHSM_KEY}" || echo "Registration failed"
+      dnf update -y
+      dnf install -y ansible git
+SHELL
+end
