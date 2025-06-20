@@ -1,0 +1,82 @@
+---
+- name: Detect if running in Vagrant
+  stat:
+    path: /vagrant
+  register: vagrant_dir
+
+- name: Set is_vagrant fact if /vagrant exists
+  set_fact:
+    is_vagrant: true
+  when: vagrant_dir.stat.exists
+
+- name: Debug current environment
+  debug:
+    msg: "Running in Vagrant: {{ is_vagrant }}"
+
+- name: Check if system is already registered
+  command: subscription-manager identity
+  register: rhsm_identity
+  ignore_errors: yes
+
+- name: Register system with Red Hat (only if not already registered)
+  command: >
+    subscription-manager register
+    --org {{ rhsm_org }}
+    --activationkey {{ rhsm_key }}
+  when: rhsm_identity.rc != 0
+  ignore_errors: yes
+
+- name: Enable CodeReady Builder repo
+  command: >
+    subscription-manager repos --enable "codeready-builder-for-rhel-9-{{ ansible_architecture }}-rpms"
+  ignore_errors: yes
+
+- name: Install EPEL release
+  dnf:
+    name: epel-release
+    state: present
+
+- name: Install base development tools
+  dnf:
+    name: "@Development Tools"
+    state: present
+
+- name: Install core utilities and languages
+  dnf:
+    name:
+      - kernel-headers
+      - kernel-devel
+      - dkms
+      - python3-pip
+      - git
+      - wget
+      - curl
+      - zsh
+      - ansible
+      - neovim
+    state: present
+
+- name: Disable SELinux
+  selinux:
+    state: disabled
+
+- name: Ensure SELinux is permanently disabled
+  replace:
+    path: /etc/selinux/config
+    regexp: '^SELINUX=.*'
+    replace: 'SELINUX=disabled'
+
+# - name: Create user 'justin' if not present
+#   user:
+#     name: justin
+#     password: "{{ justin_password_hash }}"
+#     shell: "{{ justin_shell }}"
+#     groups: wheel
+#     append: yes
+#   when: add_justin_user
+
+- name: Ensure wheel group has sudo (but not passwordless)
+  copy:
+    dest: /etc/sudoers.d/wheel_nopasswd
+    content: '%wheel ALL=(ALL) ALL'
+    mode: '0440'

@@ -1,48 +1,104 @@
-# Vagrant
-.vagrant/
-*.box
-
-# Ansible
-*.retry
-*.log
-inventory/*
-!inventory/hosts  # Keep your example/default inventory
-group_vars/*.vault.yml
-
-# Stable Diffusion
-models/
-outputs/
-checkpoints/
-*.safetensors
-*.ckpt
-
-# System / IDE
+# ────────────────────────────────
+# General system files
+# ────────────────────────────────
 .DS_Store
+Thumbs.db
 *.swp
 *.swo
-Thumbs.db
-ehthumbs.db
+*~
+*.bak
 
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.env
-.venv/
+# ────────────────────────────────
+# Ansible-specific
+# ────────────────────────────────
+*.retry
+*.log
+*.tar.gz
+*.zip
+*.gz
+*.tgz
 
-# VSCode
-.vscode/
-.settings/
+# Inventory overrides / sensitive files
+inventory/host_vars/
+inventory/group_vars/
+inventory/*.ini
+inventory/*.yml
+inventory/*.yaml
 
-# Token/config secrets
-*.token
-*.pem
-*.key
-*.crt
-*.creds
+# Vault password and encrypted secrets
+.vault_pass.txt
+*.vault.yml
+*vault*.yml
+*.secret
+*.enc
 secrets.yml
 
-# OS specific
-*.bak
-*.tmp
+# Encrypted or environment-specific vars
+vars/*_vault.yml
+vars/secret_*.yml
 
+# Collections cache
+~/.ansible/
+~/.ansible/tmp/
+collections/ansible_collections/
+
+# Galaxy role installs (unless checked-in roles are intended)
+roles/*/
+!roles/base/
+!roles/common/
+!roles/nvidia/
+!roles/sd-automatic1111/
+!roles/ai-tools/
+
+# ────────────────────────────────
+# Python-related
+# ────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+.env
+.venv
+pip-log.txt
+
+# ────────────────────────────────
+# Vagrant & VM-specific
+# ────────────────────────────────
+.vagrant/
+*.box
+*.ova
+*.ovf
+*.vmx
+*.vdi
+*.vmdk
+*.iso
+
+# Shared folders
+vagrant/shared/
+
+# ────────────────────────────────
+# Editor/IDE files
+# ────────────────────────────────
+.idea/
+.vscode/
+*.code-workspace
+
+# ────────────────────────────────
+# Logs and dumps
+# ────────────────────────────────
+*.log
+*.err
+*.out
+*.pid
+*.sock
+
+# ────────────────────────────────
+# User-defined environment and token directories
+# ────────────────────────────────
+env/
+token/
+*.token
