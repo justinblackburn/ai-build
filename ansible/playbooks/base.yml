@@ -2,9 +2,5 @@
 - name: Base system configuration
   hosts: all
   become: true
-  vars:
-    enable_subscription: true       # Set to false when running in Vagrant
-  vars_files:
-    - ../vars/rhsm.yml
   roles:
     - base

@@ -1,0 +1,37 @@
+---
+- name: Install Podman and podman-compose
+  package:
+    name:
+      - podman
+      - podman-compose
+    state: present
+
+- name: Enable Podman socket for rootless usage
+  systemd:
+    name: podman.socket
+    state: started
+    enabled: true
+  become: true
+
+- name: Ensure Podman config directory exists for rootless users
+  file:
+    path: "/home/{{ item.name }}/.config/containers"
+    state: directory
+    owner: "{{ item.name }}"
+    group: "{{ item.service_group | default(item.name) }}"
+    mode: "0700"
+  when: item.enable_podman | default(false)
+  loop: "{{ users }}"
+
+- name: Write containers.conf for rootless Podman users
+  copy:
+    dest: "/home/{{ item.name }}/.config/containers/containers.conf"
+    content: |
+      [engine]
+      events_logger = "journald"
+      runtime = "runc"
+    owner: "{{ item.name }}"
+    group: "{{ item.service_group | default(item.name) }}"
+    mode: "0644"
+  when: item.enable_podman | default(false)
+  loop: "{{ users }}"

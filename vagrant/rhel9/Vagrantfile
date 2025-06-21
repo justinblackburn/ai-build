@@ -6,6 +6,14 @@ Vagrant.configure("2") do |config|
     vb.name = "rhel9-vagrant" # Add this line
     vb.memory = 4096
     vb.cpus = 2
+    vb.customize [
+      "storageattach", :id,
+      "--storagectl", "IDE Controller",
+      "--port", "1",
+      "--device", "0",
+      "--type", "dvddrive",
+      "--medium", "../../files/VBoxGuestAdditions_7.1.10.iso"
+    ]
   end
 
   # Share your repo directory (optional)
@@ -29,4 +37,14 @@ Vagrant.configure("2") do |config|
       dnf update -y
       dnf install -y ansible git
 SHELL
+
+  config.vm.provision "ansible" do |ansible|
+    ansible.playbook = "playbooks/base.yml"
+    ansible.inventory_path = "inventory/hosts.yml"
+    ansible.compatibility_mode = "2.0"
+
+    # Use ansible.cfg from your synced folder
+    ansible.raw_arguments = ["--vault-password-file", ".vault_pass.txt"]
+  end
+
 end
