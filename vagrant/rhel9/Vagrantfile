@@ -38,13 +38,4 @@ Vagrant.configure("2") do |config|
       dnf install -y ansible git
 SHELL
 
-  config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "playbooks/base.yml"
-    ansible.inventory_path = "inventory/hosts.yml"
-    ansible.compatibility_mode = "2.0"
-
-    # Use ansible.cfg from your synced folder
-    ansible.raw_arguments = ["--vault-password-file", ".vault_pass.txt"]
-  end
-
 end

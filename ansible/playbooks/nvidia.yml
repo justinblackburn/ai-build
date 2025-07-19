@@ -1,0 +1,6 @@
+---
+- name: Nvidia Configuration
+  hosts: all
+  become: true
+  roles:
+    - nvidia
