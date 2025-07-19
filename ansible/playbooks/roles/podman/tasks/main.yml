@@ -4,6 +4,7 @@
     name:
       - podman
       - podman-compose
+      - runc
     state: present
 
 - name: Enable Podman socket for rootless usage

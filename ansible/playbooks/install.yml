@@ -1,0 +1,11 @@
+---
+- name: Full AI Workstation Installation
+  hosts: all
+  become: true
+  roles:
+    - base
+    - users
+    - podman
+    - nvidia
+    - stable_diffusion
+    # - llm

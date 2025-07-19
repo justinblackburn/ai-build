@@ -35,8 +35,20 @@
   loop_control:
     label: "{{ item.0.name }}: {{ item.1 }}"
 
-- name: Ensure wheel group has sudo (but not passwordless)
+- name: Ensure wheel group has sudo (but with password)
   copy:
     dest: /etc/sudoers.d/wheel_nopasswd
     content: '%wheel ALL=(ALL) ALL'
     mode: '0440'
+
+- name: Check if loginctl exists
+  stat:
+    path: /bin/loginctl
+  register: loginctl_bin
+
+- name: Enable lingering for users
+  command: loginctl enable-linger {{ item.name }}
+  when:
+    - not item.system | default(false)
+    - item.enable_podman | default(false)
+  loop: "{{ users }}"

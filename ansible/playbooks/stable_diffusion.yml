@@ -1,0 +1,6 @@
+---
+- name: Stable Diffusion Setup
+  hosts: all
+  become: true
+  roles:
+    - stable_diffusion

@@ -1,0 +1,4 @@
+---
+nvidia_install_gpu_drivers: true
+nvidia_install_container_toolkit: true
+nvidia_container_runtime_path: /usr/bin/nvidia-container-runtime

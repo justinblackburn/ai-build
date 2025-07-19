@@ -1,0 +1,2 @@
+sd_webui_root: /opt/stable-diffusion-webui
+sd_webui_data_dir: /home/sd-data/data

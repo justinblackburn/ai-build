@@ -1,0 +1,134 @@
+---
+- name: Set defaults for sd-webui installation paths
+  ansible.builtin.set_fact:
+    sd_webui_models_dir: "{{ sd_webui_models_dir | default(sd_webui_data_dir + '/models') }}"
+
+- name: Set defaults for sd-webui installation paths
+  ansible.builtin.set_fact:
+    sd_webui_venv: "{{ sd_webui_venv | default(sd_webui_data_dir + '/venv') }}"
+    sd_webui_ckpt_dir: "{{ sd_webui_ckpt_dir | default(sd_webui_models_dir + '/Stable-diffusion') }}"
+    sd_webui_vae_dir: "{{ sd_webui_vae_dir | default(sd_webui_models_dir + '/VAE') }}"
+    sd_webui_lora_dir: "{{ sd_webui_lora_dir | default(sd_webui_models_dir + '/Lora') }}"
+    sd_webui_embeddings_dir: "{{ sd_webui_embeddings_dir | default(sd_webui_models_dir + '/embeddings') }}"
+
+- name: Ensure required sd-webui directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: sd-data
+    group: sd-data
+    mode: '0755'
+  loop:
+    - "{{ sd_webui_root }}"
+    - "{{ sd_webui_data_dir }}"
+    - "{{ sd_webui_venv }}"
+    - "{{ sd_webui_ckpt_dir }}"
+    - "{{ sd_webui_vae_dir }}"
+    - "{{ sd_webui_lora_dir }}"
+    - "{{ sd_webui_embeddings_dir }}"
+
+- name: Add placeholder .gitkeep to model directories (optional)
+  ansible.builtin.copy:
+    dest: "{{ item }}/.gitkeep"
+    content: ""
+    owner: sd-data
+    group: sd-data
+    mode: '0644'
+  loop:
+    - "{{ sd_webui_ckpt_dir }}"
+    - "{{ sd_webui_vae_dir }}"
+    - "{{ sd_webui_lora_dir }}"
+    - "{{ sd_webui_embeddings_dir }}"
+
+- name: Clone AUTOMATIC1111 repository
+  git:
+    repo: https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
+    dest: "{{ sd_webui_root }}"
+    version: master
+    update: no
+
+- name: Set up Python virtual environment
+  command: python3 -m venv "{{ sd_webui_venv }}"
+  args:
+    creates: "{{ sd_webui_venv }}/bin/activate"
+
+- name: Install Python requirements
+  pip:
+    requirements: "{{ sd_webui_root }}/requirements.txt"
+    virtualenv: "{{ sd_webui_venv }}"
+    virtualenv_command: python3 -m venv
+    virtualenv_site_packages: no
+
+- name: Ensure required Python packages are installed
+  pip:
+    name:
+      - importlib_metadata
+      - setuptools
+      - wheel
+    virtualenv: "{{ sd_webui_venv }}"
+    virtualenv_site_packages: false
+
+- name: Uninstall xformers
+  pip:
+    name: xformers
+    state: absent
+    executable: "{{ sd_webui_venv }}/bin/pip"
+
+- name: Install ninja
+  pip:
+    name: ninja
+    state: present
+    executable: "{{ sd_webui_venv }}/bin/pip"
+
+- name: Install or upgrade flash-attn
+  pip:
+    name: flash-attn
+    state: latest
+    executable: "{{ sd_webui_venv }}/bin/pip"
+
+- name: Install xformers from GitHub
+  pip:
+    name: git+https://github.com/facebookresearch/xformers.git
+    executable: "{{ sd_webui_venv }}/bin/pip"
+
+- name: Create launch wrapper script
+  ansible.builtin.copy:
+    dest: "{{ sd_webui_root }}/launch.sh"
+    mode: '0755'
+    owner: sd-data
+    group: sd-data
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+
+      VENV="{{ sd_webui_venv }}"
+      ROOT="{{ sd_webui_root }}"
+      DATA="{{ sd_webui_data_dir }}"
+      CKPT="{{ sd_webui_ckpt_dir }}"
+      VAE="{{ sd_webui_vae_dir }}"
+      LORA="{{ sd_webui_lora_dir }}"
+      EMBED="{{ sd_webui_embeddings_dir }}"
+
+      source "${VENV}/bin/activate"
+
+      exec python3 "${ROOT}/launch.py" \
+        --xformers \
+        --no-half-vae \
+        --listen \
+        --port 7860 \
+        --data-dir "${DATA}" \
+        --ckpt-dir "${CKPT}" \
+        --vae-dir "${VAE}" \
+        --lora-dir "${LORA}" \
+        --embeddings-dir "${EMBED}" \
+        --skip-torch-cuda-test
+
+- name: Ensure Stable Diffusion directories have correct ownership
+  file:
+    path: "{{ item }}"
+    owner: sd-data
+    group: sd-data
+    recurse: yes
+  loop:
+    - "{{ sd_webui_root }}"
+    - "{{ sd_webui_data_dir }}"

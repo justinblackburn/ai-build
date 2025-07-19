@@ -1,7 +1,14 @@
+# Load .env file
+File.readlines('.env').each do |line|
+  next if line.strip.empty? || line.strip.start_with?('#')
+  key, value = line.strip.split('=', 2)
+  ENV[key] = value
+end
+
 Vagrant.configure("2") do |config|
   config.vm.box = "generic/rhel9"
   config.vm.hostname = "rhel9-vagrant"
-  
+  config.vm.network "forwarded_port", guest: 7860, host: 7860
   config.vm.provider "virtualbox" do |vb|
     vb.name = "rhel9-vagrant" # Add this line
     vb.memory = 4096
@@ -17,7 +24,7 @@ Vagrant.configure("2") do |config|
   end
 
   # Share your repo directory (optional)
-  config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+  config.vm.synced_folder ".", "/vagrant", type: "rsync"
   config.vm.synced_folder "../shared", "/mnt/shared", mount_options: ["dmode=755,fmode=644"]
   config.vm.synced_folder "../../ansible", "/mnt/ansible", mount_options: ["dmode=755,fmode=644"]
 
