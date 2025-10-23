@@ -1,0 +1,46 @@
+---
+- name: Check for NVIDIA GPU
+  shell: lspci | grep -i nvidia
+  register: nvidia_gpu_check
+  changed_when: false
+  failed_when: false
+
+- name: Set fact if NVIDIA GPU is present
+  set_fact:
+    has_nvidia_gpu: "{{ nvidia_gpu_check.stdout != '' }}"
+
+- name: Skip NVIDIA setup on unsupported environments
+  debug:
+    msg: "Skipping NVIDIA setup — no GPU or not a supported virtualization type ({{ ansible_virtualization_type }})"
+  when: not has_nvidia_gpu or ansible_virtualization_type not in ['kvm', 'none']
+
+- name: Install NVIDIA GPU drivers and tools
+  when: has_nvidia_gpu and ansible_virtualization_type in ['kvm', 'none']
+  block:
+    - name: Install dependencies
+      dnf:
+        name:
+          - gcc
+          - kernel-devel
+          - kernel-headers
+          - dkms
+          - elfutils-libelf-devel
+          - make
+          - unzip
+          - wget
+        state: present
+
+    - name: Download NVIDIA driver
+      get_url:
+        url: "{{ nvidia_driver_url }}"
+        dest: "/tmp/NVIDIA-Linux.run"
+        mode: '0755'
+
+    - name: Run NVIDIA installer
+      command: "sh /tmp/NVIDIA-Linux.run -s --dkms"
+      args:
+        creates: "/usr/bin/nvidia-smi"
+
+    - name: Reboot the system
+      reboot:
+        reboot_timeout: 600

@@ -1,0 +1,13 @@
+# Always use LF for Ansible YAML and shell scripts
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+
+# Markdown and text files use native endings
+*.md text
+*.txt text
+
+# Binary files - don't modify line endings
+*.png binary
+*.jpg binary
+*.zip binary

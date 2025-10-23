@@ -1,0 +1,104 @@
+# ────────────────────────────────
+# General system files
+# ────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+*.bak
+
+# ────────────────────────────────
+# Ansible-specific
+# ────────────────────────────────
+*.retry
+*.log
+*.tar.gz
+*.zip
+*.gz
+*.tgz
+
+# Inventory overrides / sensitive files
+ansible/inventory/host_vars/*
+ansible/inventory/group_vars/*
+ansible/inventory/*.ini
+ansible/inventory/*.yml
+ansible/inventory/*.yaml
+
+# Vault password and encrypted secrets
+.vault_pass.txt
+*.vault.yml
+*vault*.yml
+*.secret
+*.enc
+secrets.yml
+
+# Encrypted or environment-specific vars
+vars/*_vault.yml
+vars/secret_*.yml
+
+# Collections cache
+~/.ansible/
+~/.ansible/tmp/
+collections/ansible_collections/
+
+# Galaxy role installs (unless checked-in roles are intended)
+roles/*/
+!roles/base/
+!roles/common/
+!roles/nvidia/
+!roles/sd-automatic1111/
+!roles/ai-tools/
+
+# ────────────────────────────────
+# Python-related
+# ────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+.env
+.venv
+pip-log.txt
+
+# ────────────────────────────────
+# Vagrant & VM-specific
+# ────────────────────────────────
+.vagrant/
+*.box
+*.ova
+*.ovf
+*.vmx
+*.vdi
+*.vmdk
+*.iso
+
+# Shared folders
+vagrant/shared/
+
+# ────────────────────────────────
+# Editor/IDE files
+# ────────────────────────────────
+.idea/
+.vscode/
+*.code-workspace
+
+# ────────────────────────────────
+# Logs and dumps
+# ────────────────────────────────
+*.log
+*.err
+*.out
+*.pid
+*.sock
+
+# ────────────────────────────────
+# User-defined environment and token directories
+# ────────────────────────────────
+env/
+token/
+*.token

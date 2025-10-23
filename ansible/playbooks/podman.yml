@@ -1,0 +1,6 @@
+---
+- name: Provision system users
+  hosts: all
+  become: true
+  roles:
+    - podman

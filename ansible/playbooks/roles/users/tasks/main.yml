@@ -1,0 +1,54 @@
+---
+- name: Ensure all user groups exist
+  group:
+    name: "{{ item.service_group | default(item.name) }}"
+    system: "{{ item.system | default(false) }}"
+  loop: "{{ users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Create user accounts
+  user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(omit) }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    groups: "{{ item.groups | default([]) }}"
+    append: yes
+    create_home: yes
+    home: "{{ item.home | default('/home/' + item.name) }}"
+    group: "{{ item.service_group | default(item.name) }}"
+    system: "{{ item.system | default(false) }}"
+  loop: "{{ users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Set ownership of required directories
+  file:
+    path: "{{ item.1 }}"
+    state: directory
+    owner: "{{ item.0.name }}"
+    group: "{{ item.0.service_group | default(item.0.name) }}"
+    mode: "0755"
+  with_subelements:
+    - "{{ users }}"
+    - directories
+  loop_control:
+    label: "{{ item.0.name }}: {{ item.1 }}"
+
+- name: Ensure wheel group has sudo (but with password)
+  copy:
+    dest: /etc/sudoers.d/wheel_nopasswd
+    content: '%wheel ALL=(ALL) ALL'
+    mode: '0440'
+
+- name: Check if loginctl exists
+  stat:
+    path: /bin/loginctl
+  register: loginctl_bin
+
+- name: Enable lingering for users
+  command: loginctl enable-linger {{ item.name }}
+  when:
+    - not item.system | default(false)
+    - item.enable_podman | default(false)
+  loop: "{{ users }}"
