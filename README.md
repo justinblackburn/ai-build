@@ -104,41 +104,6 @@ ansible/
     └── secrets.yml
 ```
 
----
-
-## hosts.yml
-
-```yaml
----
-all:
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
-    base_dir: /opt/ai-build
-    data_dir: /home/sd/data
-    log_dir: /var/log/ai-build
-    gpu_enabled: true
-    podman_network: ai-net
-    podman_storage_driver: overlay
-    enable_rag: true
-    enable_stable_diffusion: true
-
-  children:
-    local:
-      hosts:
-        localhost:
-          ansible_connection: local
-          ansible_become: true
-
-    lab:
-      hosts:
-        rhel9-lab:
-          ansible_host: 192.168.122.100
-          ansible_user: justin
-          ansible_become: true
-```
-
----
-
 ## group_vars/all.yml
 
 ```yaml
@@ -156,50 +121,6 @@ rhsm_org: !vault |
 rhsm_key: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           # (encrypted Red Hat activation key goes here)
-
-# --- NVIDIA Driver Settings ---
-nvidia_driver_url: "https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run"
-nvidia_driver_file: "{{ nvidia_driver_url | basename }}"
-
-# --- User Definitions ---
-users:
-  - name: blah
-    password: !vault |
-              $ANSIBLE_VAULT;1.1;AES256
-              # (encrypted password hash)
-    shell: /bin/zsh
-    groups: [wheel]
-    system: false
-    enable_podman: true
-    directories: []
-
-  - name: sd-data
-    shell: /sbin/nologin
-    system: true
-    enable_podman: true
-    directories:
-      - /home/sd-data
-      - /home/sd-data/data
-```
-
----
-
-## vars/secrets.yml
-
-```yaml
----
-# Encrypted secrets for ai-build
-# Encrypt this file using ansible-vault before committing.
-
-openai_api_key: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          # (OpenAI or LLM API key)
-hf_token: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          # (Hugging Face API token)
-wandb_api_key: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          # (Weights & Biases API key)
 ```
 
 ## Local Testing with Vagrant
