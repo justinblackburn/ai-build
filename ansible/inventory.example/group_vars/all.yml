@@ -1,0 +1,25 @@
+---
+enable_subscription: true
+is_vagrant: false
+rhsm_org: '' 
+rhsm_key: '' 
+nvidia_driver_url: "https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run"
+nvidia_driver_file: "{{ nvidia_driver_url | basename }}"
+
+
+users:
+#  - name: testuser1
+#    password: 
+#    shell: /bin/zsh
+#    groups: [wheel]
+#    system: false
+#    enable_podman: true
+#    directories: []
+
+  - name: sd-data
+    shell: /sbin/nologin
+    system: true
+    enable_podman: true
+    directories:
+      - /home/sd-data
+      - /home/sd-data/data
