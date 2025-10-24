@@ -16,6 +16,68 @@
     - nvidia_gpu_present | default(false)
   block:
 
+    - name: Check if nouveau is still present in initramfs
+      ansible.builtin.shell: "lsinitrd /boot/initramfs-$(uname -r).img | grep -q nouveau"
+      args:
+        warn: false
+      register: nvidia_nouveau_initramfs
+      changed_when: false
+      failed_when: false
+      become: true
+
+    - name: Check if NVIDIA kernel module is available
+      ansible.builtin.command: modinfo nvidia
+      register: nvidia_modinfo
+      changed_when: false
+      failed_when: false
+      become: true
+
+    - name: Determine if a clean NVIDIA reinstall is required
+      ansible.builtin.set_fact:
+        nvidia_clean_reinstall: "{{ nvidia_force_clean_reinstall | bool or nvidia_nouveau_initramfs.rc == 0 or nvidia_modinfo.rc != 0 }}"
+
+    - name: Remove conflicting NVIDIA packages when rebuild required
+      ansible.builtin.dnf:
+        name:
+          - nvidia-driver*
+          - akmod-nvidia*
+          - xorg-x11-drv-nvidia*
+          - nvidia-settings*
+          - nvidia-modprobe*
+          - nvidia-persistenced*
+        state: absent
+      become: true
+      when: nvidia_clean_reinstall | default(false)
+
+    - name: Remove stale NVIDIA artifacts
+      ansible.builtin.shell: |
+        set -euo pipefail
+        rm -rf /usr/lib/modules/{{ ansible_kernel }}/extra/nvidia*
+        rm -rf /var/lib/dkms/nvidia*
+        rm -rf /var/cache/akmods/*
+        rm -rf /var/tmp/akmodsbuild*
+        rm -f /etc/modprobe.d/nvidia*.conf
+      args:
+        warn: false
+      become: true
+      when: nvidia_clean_reinstall | default(false)
+
+    - name: Ensure akmods cache directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /var/cache/akmods
+        - /var/tmp/akmodsbuild
+      become: true
+      when: nvidia_clean_reinstall | default(false)
+
+    - name: Rebuild initramfs after cleanup
+      ansible.builtin.command: dracut --force
+      become: true
+      when: nvidia_clean_reinstall | default(false)
+
     - name: Disable nouveau kernel module
       ansible.builtin.copy:
         dest: /etc/modprobe.d/blacklist-nouveau.conf
@@ -77,28 +139,48 @@
         state: present
 
     - name: Install NVIDIA driver packages
-      dnf:
+      ansible.builtin.dnf:
         name:
           - akmod-nvidia
           - xorg-x11-drv-nvidia-cuda
         state: present
+      register: nvidia_driver_install
+      notify: Rebuild NVIDIA akmods
+
+    - name: Ensure NVIDIA kernel arguments are set
+      ansible.builtin.command: grubby --info=ALL
+      register: nvidia_grubby_info
+      changed_when: false
+      become: true
+
+    - name: Apply required kernel arguments for NVIDIA
+      ansible.builtin.command: "grubby --update-kernel=ALL --args='{{ item }}'"
+      loop: "{{ nvidia_kernel_args }}"
+      become: true
+      when: item not in nvidia_grubby_info.stdout
 
     - name: Add NVIDIA Container Toolkit repo
-      get_url:
+      ansible.builtin.get_url:
         url: "{{ nvidia_container_repo_url }}"
         dest: /etc/yum.repos.d/libnvidia-container.repo
+      when: nvidia_install_container_toolkit | bool
+      become: true
 
     - name: Install NVIDIA Container Toolkit
-      dnf:
+      ansible.builtin.dnf:
         name: nvidia-container-toolkit
         state: present
+      when: nvidia_install_container_toolkit | bool
+      become: true
 
     - name: Configure Podman to use NVIDIA runtime
-      copy:
+      ansible.builtin.copy:
         dest: /etc/containers/containers.conf.d/nvidia.conf
         content: |
           [engine]
           runtime = "nvidia"
+      when: nvidia_install_container_toolkit | bool
+      become: true
 
     # - name: Trigger reboot to load NVIDIA drivers
     #   reboot:
