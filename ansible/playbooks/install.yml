@@ -8,4 +8,5 @@
     - podman
     - nvidia
     - stable_diffusion
+    - whisper
     # - llm

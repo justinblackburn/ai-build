@@ -1,0 +1,81 @@
+---
+- name: Ensure Whisper data directory exists
+  ansible.builtin.file:
+    path: "{{ whisper_data_dir }}"
+    state: directory
+    owner: "{{ whisper_user }}"
+    group: "{{ whisper_group }}"
+    mode: '0755'
+
+- name: Ensure Whisper virtual environment exists
+  ansible.builtin.command: python3 -m venv "{{ whisper_venv }}"
+  args:
+    creates: "{{ whisper_venv }}/bin/activate"
+
+- name: Ensure Whisper system dependencies are installed
+  ansible.builtin.dnf:
+    name: "{{ whisper_ffmpeg_package }}"
+    state: present
+
+- name: Install Whisper tooling
+  ansible.builtin.pip:
+    name:
+      - openai-whisper
+      - yt-dlp
+    virtualenv: "{{ whisper_venv }}"
+
+- name: Create Whisper helper script
+  ansible.builtin.copy:
+    dest: "{{ whisper_data_dir }}/whisper-transcribe.sh"
+    mode: '0755'
+    owner: "{{ whisper_user }}"
+    group: "{{ whisper_group }}"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+
+      if [ "$#" -lt 1 ]; then
+        echo "Usage: $0 <audio-file> [whisper options]" >&2
+        exit 1
+      fi
+
+      source "{{ whisper_venv }}/bin/activate"
+      exec "{{ whisper_venv }}/bin/whisper" "$@"
+
+- name: Create YouTube transcription helper script
+  ansible.builtin.copy:
+    dest: "{{ whisper_data_dir }}/youtube-transcribe.sh"
+    mode: '0755'
+    owner: "{{ whisper_user }}"
+    group: "{{ whisper_group }}"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+
+      if [ "$#" -lt 1 ]; then
+        echo "Usage: $0 <youtube-url> [whisper options]" >&2
+        exit 1
+      fi
+
+      URL="$1"
+      shift
+
+      TMP_DIR=$(mktemp -d /tmp/whisper-yt-XXXXXX)
+      trap 'rm -rf "${TMP_DIR}"' EXIT
+
+      source "{{ whisper_venv }}/bin/activate"
+
+      "{{ whisper_venv }}/bin/yt-dlp" \
+        --extract-audio \
+        --audio-format wav \
+        --audio-quality 0 \
+        -o "${TMP_DIR}/audio.%(ext)s" \
+        "${URL}"
+
+      AUDIO_FILE=$(find "${TMP_DIR}" -type f -name 'audio.*' -print -quit)
+      if [ -z "${AUDIO_FILE}" ]; then
+        echo "Failed to download audio from ${URL}" >&2
+        exit 2
+      fi
+
+      "{{ whisper_venv }}/bin/whisper" "${AUDIO_FILE}" "$@"

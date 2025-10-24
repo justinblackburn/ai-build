@@ -1,23 +1,26 @@
 ---
+# Global defaults for ai-build roles.
+# Copy this file to your real inventory and replace placeholder values.
+
+# Subscription Management
 enable_subscription: true
 is_vagrant: false
-rhsm_org: '' 
-rhsm_key: '' 
+rhsm_org: "YOUR_RED_HAT_ORG_ID"
+rhsm_key: "YOUR_REDHAT_ACTIVATION_KEY"
+
+# Stable Diffusion / Whisper paths
+sd_webui_root: "/opt/stable-diffusion-webui"
+sd_webui_data_dir: "/home/sd-data/data"
+
+# NVIDIA driver sources (override if you host drivers internally)
 nvidia_driver_url: "https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run"
 nvidia_driver_file: "{{ nvidia_driver_url | basename }}"
 
-
+# Service accounts and users created by the users role.
 users:
-#  - name: testuser1
-#    password: 
-#    shell: /bin/zsh
-#    groups: [wheel]
-#    system: false
-#    enable_podman: true
-#    directories: []
-
   - name: sd-data
-    shell: /sbin/nologin
+    comment: "Stable Diffusion / Whisper service account"
+    shell: /bin/bash
     system: true
     enable_podman: true
     directories:

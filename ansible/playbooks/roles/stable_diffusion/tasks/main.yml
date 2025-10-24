@@ -1,4 +1,11 @@
 ---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - sd_webui_root is defined
+      - sd_webui_data_dir is defined
+    fail_msg: "sd_webui_root and sd_webui_data_dir must be defined before running this role."
+
 - name: Set defaults for sd-webui installation paths
   ansible.builtin.set_fact:
     sd_webui_models_dir: "{{ sd_webui_models_dir | default(sd_webui_data_dir + '/models') }}"
@@ -40,24 +47,53 @@
     - "{{ sd_webui_lora_dir }}"
     - "{{ sd_webui_embeddings_dir }}"
 
+- name: Ensure Python and Git dependencies are installed
+  ansible.builtin.dnf:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - python3-virtualenv
+    state: present
+
+- name: Ensure local wheel cache directory exists
+  ansible.builtin.file:
+    path: /tmp/wheels
+    state: directory
+    mode: '0755'
+
 - name: Clone AUTOMATIC1111 repository
-  git:
-    repo: https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
+  ansible.builtin.git:
+    repo: "https://github.com/AUTOMATIC1111/stable-diffusion-webui.git"
     dest: "{{ sd_webui_root }}"
     version: master
     update: no
+  become: true
+  become_user: sd-data
 
 - name: Set up Python virtual environment
-  command: python3 -m venv "{{ sd_webui_venv }}"
+  ansible.builtin.command: python3 -m venv "{{ sd_webui_venv }}"
   args:
     creates: "{{ sd_webui_venv }}/bin/activate"
 
-- name: Install Python requirements
-  pip:
+- name: Check if local wheel cache exists
+  ansible.builtin.stat:
+    path: /tmp/wheels
+  register: wheels_cache
+
+- name: Install Python requirements (cached if available)
+  ansible.builtin.pip:
     requirements: "{{ sd_webui_root }}/requirements.txt"
     virtualenv: "{{ sd_webui_venv }}"
-    virtualenv_command: python3 -m venv
-    virtualenv_site_packages: no
+    extra_args: "{{ '--find-links /tmp/wheels' if wheels_cache.stat.exists else omit }}"
+
+- name: Ensure sd-webui files owned by sd-data
+  ansible.builtin.file:
+    path: "{{ sd_webui_root }}"
+    state: directory
+    recurse: yes
+    owner: sd-data
+    group: sd-data
 
 - name: Ensure required Python packages are installed
   pip:
@@ -78,12 +114,6 @@
   pip:
     name: ninja
     state: present
-    executable: "{{ sd_webui_venv }}/bin/pip"
-
-- name: Install or upgrade flash-attn
-  pip:
-    name: flash-attn
-    state: latest
     executable: "{{ sd_webui_venv }}/bin/pip"
 
 - name: Install xformers from GitHub
@@ -132,3 +162,28 @@
   loop:
     - "{{ sd_webui_root }}"
     - "{{ sd_webui_data_dir }}"
+
+- name: Clone ComfyUI
+  ansible.builtin.git:
+    repo: https://github.com/comfyanonymous/ComfyUI.git
+    dest: /home/sd-data/data/ComfyUI
+    version: master
+  become: true
+  become_user: sd-data
+
+- name: Install ComfyUI dependencies
+  ansible.builtin.pip:
+    requirements: /home/sd-data/data/ComfyUI/requirements.txt
+    virtualenv: /home/sd-data/data/venv
+
+- name: Create ComfyUI launch wrapper
+  ansible.builtin.copy:
+    dest: /home/sd-data/data/ComfyUI/launch.sh
+    mode: '0755'
+    owner: sd-data
+    group: sd-data
+    content: |
+      #!/bin/bash
+      source /home/sd-data/data/venv/bin/activate
+      cd /home/sd-data/data/ComfyUI
+      exec python3 main.py --listen 0.0.0.0 --port 8188

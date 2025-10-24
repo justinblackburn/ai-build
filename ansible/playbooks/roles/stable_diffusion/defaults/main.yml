@@ -1,2 +1,5 @@
 sd_webui_root: /opt/stable-diffusion-webui
 sd_webui_data_dir: /home/sd-data/data
+torch_version: "torch==2.3.0+cu121"
+torchvision_version: "torchvision==0.18.0+cu121"
+torch_extra_index: "https://download.pytorch.org/whl/cu121"

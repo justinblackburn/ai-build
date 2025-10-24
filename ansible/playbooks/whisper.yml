@@ -1,0 +1,6 @@
+---
+- name: Whisper Setup
+  hosts: all
+  become: true
+  roles:
+    - whisper

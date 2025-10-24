@@ -16,7 +16,7 @@
 - name: Check if system is already registered
   command: subscription-manager identity
   register: rhsm_identity
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Register system with Red Hat (only if not already registered)
   command: >
@@ -24,16 +24,21 @@
     --org {{ rhsm_org }}
     --activationkey {{ rhsm_key }}
   when: rhsm_identity.rc != 0
-  ignore_errors: yes
+  ignore_errors: true
 
 - name: Enable CodeReady Builder repo
   command: >
     subscription-manager repos --enable "codeready-builder-for-rhel-9-{{ ansible_architecture }}-rpms"
-  ignore_errors: yes
+  ignore_errors: true
 
-- name: Install EPEL release
-  dnf:
-    name: epel-release
+- name: Import EPEL GPG key
+  ansible.builtin.rpm_key:
+    state: present
+    key: "https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-{{ ansible_distribution_major_version }}"
+
+- name: Install EPEL
+  ansible.builtin.dnf:
+    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ nvidia_repo_el_version }}.noarch.rpm"
     state: present
 
 - name: Install base development tools
@@ -46,56 +51,56 @@
     name:
       - kernel-headers
       - kernel-devel
-      - dkms
+      # - dkms
       - python3-pip
       - git
       - wget
       - curl
       - zsh
-      - ansible
-      - neovim
+      - ansible-core
+      # - neovim
     state: present
 
-- name: Disable SELinux
-  selinux:
-    state: disabled
+# - name: Disable SELinux
+#   selinux:
+#     state: disabled
 
-- name: Ensure SELinux is permanently disabled
-  replace:
-    path: /etc/selinux/config
-    regexp: '^SELINUX=.*'
-    replace: 'SELINUX=disabled'
+# - name: Ensure SELinux is permanently disabled
+#   replace:
+#     path: /etc/selinux/config
+#     regexp: '^SELINUX=.*'
+#     replace: 'SELINUX=disabled'
 
-- name: Install VirtualBox Guest Additions dependencies and modules
-  when: ansible_virtualization_type == "virtualbox"
-  block:
+# - name: Install VirtualBox Guest Additions dependencies and modules
+#   when: ansible_virtualization_type == "virtualbox"
+#   block:
 
-    - name: Install dependencies for VirtualBox Guest Additions
-      dnf:
-        name:
-          - gcc
-          - make
-          - perl
-          - bzip2
-          - dkms
-          - elfutils-libelf-devel
-        state: present
+#     - name: Install dependencies for VirtualBox Guest Additions
+#       dnf:
+#         name:
+#           - gcc
+#           - make
+#           - perl
+#           - bzip2
+#           - dkms
+#           - elfutils-libelf-devel
+#         state: present
 
-    - name: Ensure /mnt/cdrom directory exists
-      file:
-        path: /mnt/cdrom
-        state: directory
+#     - name: Ensure /mnt/cdrom directory exists
+#       file:
+#         path: /mnt/cdrom
+#         state: directory
 
-    - name: Mount VBox Guest Additions CD (if available)
-      mount:
-        path: /mnt/cdrom
-        src: /dev/cdrom
-        fstype: iso9660
-        state: mounted
-      ignore_errors: true
+#     - name: Mount VBox Guest Additions CD (if available)
+#       mount:
+#         path: /mnt/cdrom
+#         src: /dev/cdrom
+#         fstype: iso9660
+#         state: mounted
+#       ignore_errors: true
 
-    - name: Install VirtualBox Guest Additions
-      command: sh /mnt/cdrom/VBoxLinuxAdditions.run
-      args:
-        creates: /var/log/vboxadd-setup.log
-      ignore_errors: true
+#     - name: Install VirtualBox Guest Additions
+#       command: sh /mnt/cdrom/VBoxLinuxAdditions.run
+#       args:
+#         creates: /var/log/vboxadd-setup.log
+#       ignore_errors: true

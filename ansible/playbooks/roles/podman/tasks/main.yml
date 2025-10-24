@@ -1,11 +1,24 @@
 ---
-- name: Install Podman and podman-compose
+- name: Install Podman and dependencies on RHEL 9
   package:
     name:
       - podman
-      - podman-compose
       - runc
+      - python3-pip
     state: present
+
+- name: Install podman-compose via pip
+  pip:
+    name: podman-compose
+    executable: pip3
+
+- name: Ensure containers.conf.d directory exists
+  ansible.builtin.file:
+    path: /etc/containers/containers.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
 
 - name: Enable Podman socket for rootless usage
   systemd:

@@ -1,0 +1,6 @@
+---
+whisper_user: sd-data
+whisper_group: sd-data
+whisper_data_dir: /home/sd-data/data
+whisper_venv: "{{ whisper_data_dir }}/venv"
+whisper_ffmpeg_package: ffmpeg

@@ -1,4 +1,9 @@
 ---
+# defaults/main.yml
+nvidia_repo_el_version: "9"
 nvidia_install_gpu_drivers: true
 nvidia_install_container_toolkit: true
 nvidia_container_runtime_path: /usr/bin/nvidia-container-runtime
+nvidia_rpmfusion_repo_url: "https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-{{ nvidia_repo_el_version }}.noarch.rpm"
+nvidia_container_repo_url: "https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo"
+

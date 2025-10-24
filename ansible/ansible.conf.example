@@ -1,0 +1,14 @@
+[defaults]
+inventory = ./inventory/hosts.yml
+roles_path = ./playbooks/roles
+vault_password_file = ./.vault_pass.txt
+interpreter_python = auto
+stdout_callback = yaml
+retry_files_enabled = False
+host_key_checking = False
+callbacks_enabled = profile_roles
+forks = 20
+
+[privilege_escalation]
+become = True
+become_method = sudo

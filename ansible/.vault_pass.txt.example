@@ -1,0 +1,4 @@
+# Copy this file to `.vault_pass.txt` and replace the value below
+# with your unique Ansible Vault password. Keep the real file out of version control.
+
+CHANGE_ME_WITH_A_STRONG_VAULT_PASSWORD
