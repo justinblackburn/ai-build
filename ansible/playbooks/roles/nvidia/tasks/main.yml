@@ -34,7 +34,12 @@
 
     - name: Determine if a clean NVIDIA reinstall is required
       ansible.builtin.set_fact:
-        nvidia_clean_reinstall: "{{ nvidia_force_clean_reinstall | bool or nvidia_nouveau_initramfs.rc == 0 or nvidia_modinfo.rc != 0 }}"
+        nvidia_clean_reinstall: >-
+          {{
+            nvidia_force_clean_reinstall | bool
+            or (nvidia_nouveau_initramfs.rc | default(1)) == 0
+            or (nvidia_modinfo.rc | default(1)) != 0
+          }}
 
     - name: Remove conflicting NVIDIA packages when rebuild required
       ansible.builtin.dnf:

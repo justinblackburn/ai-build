@@ -99,11 +99,27 @@
 
       source "{{ whisper_venv }}/bin/activate"
 
+      YT_DLP_OPTS=()
+      if [[ -n "${YT_DLP_COOKIES_FILE:-}" ]]; then
+        YT_DLP_OPTS+=(--cookies "${YT_DLP_COOKIES_FILE}")
+      elif [[ -n "${YT_DLP_BROWSER:-}" ]]; then
+        if [[ -n "${YT_DLP_BROWSER_PROFILE:-}" ]]; then
+          YT_DLP_OPTS+=(--cookies-from-browser "${YT_DLP_BROWSER}:${YT_DLP_BROWSER_PROFILE}")
+        else
+          YT_DLP_OPTS+=(--cookies-from-browser "${YT_DLP_BROWSER}")
+        fi
+      fi
+      if [[ -n "${YT_DLP_EXTRA_OPTS:-}" ]]; then
+        # shellcheck disable=SC2206
+        YT_DLP_OPTS+=(${YT_DLP_EXTRA_OPTS})
+      fi
+
       "{{ whisper_venv }}/bin/yt-dlp" \
         --extract-audio \
         --audio-format wav \
         --audio-quality 0 \
         -o "${TMP_DIR}/audio.%(ext)s" \
+        "${YT_DLP_OPTS[@]}" \
         "${URL}"
 
       AUDIO_FILE=$(find "${TMP_DIR}" -type f -name 'audio.*' -print -quit)

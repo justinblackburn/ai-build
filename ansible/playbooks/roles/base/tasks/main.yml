@@ -38,7 +38,7 @@
 
 - name: Install EPEL
   ansible.builtin.dnf:
-    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ nvidia_repo_el_version }}.noarch.rpm"
+    name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
     state: present
 
 - name: Install base development tools
@@ -60,6 +60,40 @@
       - ansible-core
       # - neovim
     state: present
+
+- name: Ensure NVIDIA audio dependencies installed
+  when: not is_vagrant | default(false)
+  block:
+    - name: Install kernel-modules-extra for running kernel
+      ansible.builtin.dnf:
+        name: "kernel-modules-extra-{{ ansible_kernel }}"
+        state: present
+      register: kernel_modules_extra_result
+      ignore_errors: true
+
+    - name: Install generic kernel-modules-extra package as fallback
+      ansible.builtin.dnf:
+        name: kernel-modules-extra
+        state: present
+      when: kernel_modules_extra_result is failed
+
+- name: Load NVIDIA HDA audio modules (best effort)
+  ansible.builtin.shell: |
+    modprobe snd_hda_intel || true
+    modprobe snd_hda_codec_hdmi || true
+  when: not is_vagrant | default(false)
+  changed_when: false
+
+- name: Persist NVIDIA audio modules at boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/nvidia-audio.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      snd_hda_intel
+      snd_hda_codec_hdmi
+  when: not is_vagrant | default(false)
 
 # - name: Disable SELinux
 #   selinux:
