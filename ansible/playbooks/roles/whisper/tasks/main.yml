@@ -24,6 +24,36 @@
       - yt-dlp
     virtualenv: "{{ whisper_venv }}"
 
+- name: Ensure Whisper cache directory exists
+  ansible.builtin.file:
+    path: "{{ whisper_cache_dir }}"
+    state: directory
+    owner: "{{ whisper_user }}"
+    group: "{{ whisper_group }}"
+    mode: '0755'
+
+- name: Validate Whisper model selections
+  ansible.builtin.assert:
+    that:
+      - whisper_model_urls[item] is defined
+    success_msg: "Model {{ item }} is recognized for prefetch."
+    fail_msg: "Model {{ item }} is not a known Whisper checkpoint. Update whisper_model_urls."
+  loop: "{{ whisper_models }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: Prefetch Whisper model checkpoints
+  ansible.builtin.get_url:
+    url: "{{ whisper_model_urls[item].url }}"
+    dest: "{{ whisper_cache_dir }}/{{ item }}.pt"
+    checksum: "sha256:{{ whisper_model_urls[item].sha256 }}"
+    mode: '0644'
+    owner: "{{ whisper_user }}"
+    group: "{{ whisper_group }}"
+  loop: "{{ whisper_models }}"
+  loop_control:
+    label: "{{ item }}"
+
 - name: Create Whisper helper script
   ansible.builtin.copy:
     dest: "{{ whisper_data_dir }}/whisper-transcribe.sh"
@@ -38,6 +68,10 @@
         echo "Usage: $0 <audio-file> [whisper options]" >&2
         exit 1
       fi
+
+      export XDG_CACHE_HOME="${WHISPER_CACHE_HOME:-{{ whisper_cache_home }}}"
+      export WHISPER_CACHE_DIR="${WHISPER_CACHE_DIR:-${XDG_CACHE_HOME}/whisper}"
+      mkdir -p "${WHISPER_CACHE_DIR}"
 
       source "{{ whisper_venv }}/bin/activate"
       exec "{{ whisper_venv }}/bin/whisper" "$@"
