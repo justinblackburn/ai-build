@@ -110,14 +110,17 @@ After provisioning, switch to the service account or run with sudo:
 sudo -u sd-data -- /home/sd-data/data/whisper-transcribe.sh /path/to/audio.wav --model large
 sudo -u sd-data -- /home/sd-data/data/youtube-transcribe.sh "https://youtu.be/clip" --model medium.en
 sudo -u sd-data -- /home/sd-data/data/stable-diffusion-webui/launch.sh
+COMFY_LISTEN_ADDR=127.0.0.1 COMFY_PORT=8188 sudo -u sd-data -- /home/sd-data/data/ComfyUI/launch.sh
 ```
 
 The scripts activate the Python virtual environment and call the venv-local executables (`whisper`, `yt-dlp`, `launch.py`).
 
+> Tip: The ComfyUI launcher accepts environment overrides such as `COMFY_LISTEN_ADDR`, `COMFY_PORT`, and directory variables (`COMFY_OUTPUT_DIR`, `COMFY_TEMP_DIR`, etc.). When binding to `0.0.0.0`, the wrapper now echoes a friendly `http://127.0.0.1:PORT` URL so it’s clear which address to open locally.
+
 ---
 
 ## Tips & Troubleshooting
-- **GPU Drivers:** After installing the `nvidia` role, reboot so the nouveau blacklist takes effect, then verify with `nvidia-smi`.
+- **GPU Drivers:** After installing the `nvidia` role, reboot so the nouveau blacklist takes effect, then verify with `nvidia-smi`. If nouveau keeps resurfacing or the NVIDIA module fails to load, set `nvidia_force_clean_reinstall: true` in inventory to trigger the automated cleanup/rebuild sequence (removes stale drivers, rebuilds `initramfs`, reapplies kernel args, and reruns `akmods`).
 - **Ansible Vault:** Use `ansible-vault encrypt` on secrets (e.g., RHSM keys). The vault password file path matches the sample Ansible config.
 - **Vagrant Testing:** `vagrant/rhel9/` contains a disposable VM definition for validating playbooks without touching production gear.
 - **Temp Directories:** If you run Ansible inside a restricted environment, set `ANSIBLE_LOCAL_TEMP`/`ANSIBLE_REMOTE_TEMP` to a writable path (see `.env.example` for inspiration).

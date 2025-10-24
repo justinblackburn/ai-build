@@ -6,4 +6,8 @@ nvidia_install_container_toolkit: true
 nvidia_container_runtime_path: /usr/bin/nvidia-container-runtime
 nvidia_rpmfusion_repo_url: "https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-{{ nvidia_repo_el_version }}.noarch.rpm"
 nvidia_container_repo_url: "https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo"
-
+nvidia_force_clean_reinstall: false
+nvidia_kernel_args:
+  - rd.driver.blacklist=nouveau
+  - modprobe.blacklist=nouveau
+  - nvidia-drm.modeset=1

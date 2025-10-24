@@ -184,6 +184,35 @@
     group: sd-data
     content: |
       #!/bin/bash
-      source /home/sd-data/data/venv/bin/activate
-      cd /home/sd-data/data/ComfyUI
-      exec python3 main.py --listen 0.0.0.0 --port 8188
+      set -euo pipefail
+
+      VENV="${COMFY_VENV:-/home/sd-data/data/venv}"
+      ROOT_DIR="${COMFY_ROOT_DIR:-/home/sd-data/data/ComfyUI}"
+      LISTEN_ADDR="${COMFY_LISTEN_ADDR:-0.0.0.0}"
+      PORT="${COMFY_PORT:-8188}"
+      OUTPUT_DIR="${COMFY_OUTPUT_DIR:-${ROOT_DIR}/output}"
+      TEMP_DIR="${COMFY_TEMP_DIR:-${ROOT_DIR}/temp}"
+      INPUT_DIR="${COMFY_INPUT_DIR:-${ROOT_DIR}/input}"
+      USER_DIR="${COMFY_USER_DIR:-${ROOT_DIR}/user}"
+
+      source "${VENV}/bin/activate"
+      cd "${ROOT_DIR}"
+
+      DISPLAY_HOST="${LISTEN_ADDR}"
+      if [[ "${LISTEN_ADDR}" == "0.0.0.0" ]]; then
+        DISPLAY_HOST="127.0.0.1"
+      fi
+
+      echo "Starting ComfyUI on ${LISTEN_ADDR}:${PORT}"
+      echo "Open http://${DISPLAY_HOST}:${PORT} in your browser."
+
+      mkdir -p "${OUTPUT_DIR}" "${TEMP_DIR}" "${INPUT_DIR}" "${USER_DIR}"
+
+      exec python3 main.py \
+        --listen "${LISTEN_ADDR}" \
+        --port "${PORT}" \
+        --output-directory "${OUTPUT_DIR}" \
+        --temp-directory "${TEMP_DIR}" \
+        --input-directory "${INPUT_DIR}" \
+        --user-directory "${USER_DIR}" \
+        "$@"
