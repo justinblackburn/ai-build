@@ -1,0 +1,7 @@
+psycopg2-binary
+flask
+langchain
+langchain-text-splitters
+pdfminer.six
+tiktoken
+pgvector

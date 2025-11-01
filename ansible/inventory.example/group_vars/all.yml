@@ -26,3 +26,15 @@ users:
     directories:
       - /home/sd-data
       - /home/sd-data/data
+
+# Local RAG stack configuration
+llm_rag_pg_user: aiuser
+llm_rag_pg_password: "CHANGE_ME"
+llm_rag_pg_database: ai_context
+llm_rag_pg_port: 5432
+llm_rag_pg_host: localhost
+llm_rag_api_host_port: 19090
+llm_rag_api_container_port: 8090
+llm_rag_api_bind_address: 127.0.0.1
+llm_rag_doc_path: /srv/docs
+llm_rag_pg_data_dir: /srv/pgvector-data
