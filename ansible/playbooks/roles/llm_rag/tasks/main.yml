@@ -1,0 +1,103 @@
+---
+- name: Ensure data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  become: true
+  loop:
+    - "{{ llm_rag_doc_path }}"
+    - "{{ llm_rag_service_dir }}"
+    - "{{ llm_rag_pg_data_dir }}"
+
+- name: Deploy RAG service files
+  ansible.builtin.copy:
+    src: files/
+    dest: "{{ llm_rag_service_dir }}/"
+    mode: "0644"
+  become: true
+
+- name: Ensure RAG entrypoint is executable
+  ansible.builtin.file:
+    path: "{{ llm_rag_service_dir }}/entrypoint.sh"
+    mode: "0755"
+  become: true
+
+- name: Ensure Podman runtime override directory exists
+  ansible.builtin.file:
+    path: /etc/containers/containers.conf.d
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Remove legacy LLM runtime override
+  ansible.builtin.file:
+    path: /etc/containers/containers.conf.d/llm-rag-runtime.conf
+    state: absent
+  become: true
+
+- name: Set Podman default runtime to crun
+  ansible.builtin.copy:
+    dest: /etc/containers/containers.conf.d/zz-llm-rag-runtime.conf
+    mode: "0644"
+    content: |
+      [engine]
+      runtime = "crun"
+  become: true
+
+- name: Provide Podman wrapper using crun runtime
+  ansible.builtin.copy:
+    dest: /usr/local/bin/podman-crun
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      exec /usr/bin/podman --runtime crun "$@"
+  become: true
+
+- name: Ensure RAG pod exists
+  containers.podman.podman_pod:
+    name: "{{ llm_rag_pod_name }}"
+    state: started
+    publish:
+      - "{{ llm_rag_api_bind_address }}:{{ llm_rag_api_host_port }}:{{ llm_rag_api_container_port }}"
+  become: true
+
+- name: Run Postgres with pgvector
+  containers.podman.podman_container:
+    name: postgres
+    image: docker.io/ankane/pgvector
+    state: started
+    restart_policy: always
+    recreate: true
+    executable: /usr/local/bin/podman-crun
+    security_opt:
+      - label=disable
+    pod: "{{ llm_rag_pod_name }}"
+    env:
+      POSTGRES_USER: "{{ llm_rag_pg_user }}"
+      POSTGRES_PASSWORD: "{{ llm_rag_pg_password }}"
+      POSTGRES_DB: "{{ llm_rag_pg_database }}"
+    volume:
+      - "{{ llm_rag_pg_data_dir }}:/var/lib/postgresql/data"
+  become: true
+
+- name: Run local RAG ingestion and query service
+  containers.podman.podman_container:
+    name: rag_service
+    image: docker.io/python:3.11
+    command: /bin/bash /app/entrypoint.sh
+    state: started
+    restart_policy: always
+    recreate: true
+    executable: /usr/local/bin/podman-crun
+    security_opt:
+      - label=disable
+    pod: "{{ llm_rag_pod_name }}"
+    env:
+      PG_CONN: "{{ llm_rag_pg_conn_uri }}"
+      DOC_PATH: "{{ llm_rag_doc_path }}"
+      API_PORT: "{{ llm_rag_api_container_port }}"
+    volume:
+      - "{{ llm_rag_service_dir }}:/app"
+      - "{{ llm_rag_doc_path }}:/srv/docs"
+  become: true
