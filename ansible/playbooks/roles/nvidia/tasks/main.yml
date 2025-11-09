@@ -18,8 +18,6 @@
 
     - name: Check if nouveau is still present in initramfs
       ansible.builtin.shell: "lsinitrd /boot/initramfs-$(uname -r).img | grep -q nouveau"
-      args:
-        warn: false
       register: nvidia_nouveau_initramfs
       changed_when: false
       failed_when: false
@@ -62,8 +60,6 @@
         rm -rf /var/cache/akmods/*
         rm -rf /var/tmp/akmodsbuild*
         rm -f /etc/modprobe.d/nvidia*.conf
-      args:
-        warn: false
       become: true
       when: nvidia_clean_reinstall | default(false)
 
