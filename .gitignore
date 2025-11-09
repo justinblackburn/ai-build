@@ -80,6 +80,11 @@ pip-log.txt
 # Shared folders
 vagrant/shared/
 
+# Git repository caches (Vagrant offline mode)
+files/stable-diffusion-webui/
+files/ComfyUI/
+files/xformers/
+
 # ────────────────────────────────
 # Editor/IDE files
 # ────────────────────────────────

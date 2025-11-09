@@ -27,6 +27,12 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/vagrant", type: "rsync"
   config.vm.synced_folder "../shared", "/mnt/shared", mount_options: ["dmode=755,fmode=644"]
   config.vm.synced_folder "../../ansible", "/mnt/ansible", mount_options: ["dmode=755,fmode=644"]
+  config.vm.synced_folder "../../files", "/mnt/files", mount_options: ["dmode=755,fmode=644"]
+
+  # Persistent Python wheel cache for air-gap testing
+  config.vm.synced_folder "../shared/wheels", "/mnt/wheels",
+    create: true,
+    mount_options: ["dmode=755,fmode=644"]
 
   # Register with Red Hat Subscription Manager using activation key and org
   config.vm.provision "shell",
@@ -41,8 +47,21 @@ Vagrant.configure("2") do |config|
       subscription-manager register \
         --org="${RHSM_ORG}" \
         --activationkey="${RHSM_KEY}" || echo "Registration failed"
-      dnf update -y
-      dnf install -y ansible git
+      # Skip full update to avoid downloading 659MB linux-firmware
+      # dnf update -y
+      dnf install -y ansible git --skip-broken
+
+      # Link /tmp/wheels to persistent shared location
+      echo "Setting up persistent wheel cache..."
+      rm -rf /tmp/wheels
+      ln -sf /mnt/wheels /tmp/wheels
+      echo "Wheel cache linked: /tmp/wheels -> /mnt/wheels"
+
+      # Link /srv/rag/wheels to persistent shared location for RAG stack
+      mkdir -p /srv/rag
+      rm -rf /srv/rag/wheels
+      ln -sf /mnt/wheels /srv/rag/wheels
+      echo "RAG wheel cache linked: /srv/rag/wheels -> /mnt/wheels"
 SHELL
 
 end

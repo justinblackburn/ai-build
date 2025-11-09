@@ -177,6 +177,7 @@ This will:
 5. Update packages
 6. Install Ansible and Git
 7. Mount shared folders
+8. Set up persistent Python wheel cache at `/mnt/wheels`
 
 ### SSH into the VM
 
@@ -244,7 +245,109 @@ The Vagrantfile configures the following:
 | --- | --- | --- |
 | `vagrant/rhel9` | `/vagrant` | Vagrantfile directory (rsync) |
 | `vagrant/shared` | `/mnt/shared` | Additional shared files |
+| `vagrant/shared/wheels` | `/mnt/wheels` | **Persistent Python wheel cache** |
 | `ansible/` | `/mnt/ansible` | Playbook access |
+
+The persistent wheel cache is automatically symlinked to:
+- `/tmp/wheels` → Used by Stable Diffusion and Whisper roles
+- `/srv/rag/wheels` → Used by RAG stack
+
+This allows you to pre-download Python packages once and reuse them across VM rebuilds, enabling faster iterations and air-gap testing.
+
+---
+
+## Persistent Wheel Cache (Air-Gap Testing)
+
+The Vagrant environment includes a **persistent Python wheel cache** that survives VM rebuilds. This is essential for:
+- **Faster VM rebuilds** - Avoid re-downloading large dependencies (PyTorch ~5GB)
+- **Air-gap testing** - Test offline installation scenarios
+- **Bandwidth savings** - Download packages once, use many times
+- **Consistent testing** - Same package versions across rebuilds
+
+### Populating the Wheel Cache
+
+**Option 1: Automated Script (Recommended)**
+
+```bash
+# From the repository root on your host machine
+cd vagrant/shared/wheels
+bash populate-wheels.sh
+```
+
+The script will prompt you to select which components to download (Stable Diffusion, Whisper, RAG, or all).
+
+**Option 2: Manual Download**
+
+```bash
+# From vagrant/shared/wheels directory on host
+cd vagrant/shared/wheels
+
+# Download pip first (critical!)
+pip download pip
+
+# Download Stable Diffusion dependencies
+git clone --depth 1 https://github.com/AUTOMATIC1111/stable-diffusion-webui.git /tmp/sd-temp
+pip download -r /tmp/sd-temp/requirements.txt
+rm -rf /tmp/sd-temp
+
+# Download Whisper dependencies
+pip download openai-whisper yt-dlp
+
+# Download RAG stack dependencies
+pip download -r ../../ansible/playbooks/roles/llm_rag/files/requirements.txt
+```
+
+**Option 3: From Inside Vagrant VM**
+
+```bash
+vagrant up
+vagrant ssh
+
+# Inside VM
+cd /mnt/wheels
+pip3 download pip openai-whisper yt-dlp
+
+# Download after playbooks run
+pip3 download -r /opt/stable-diffusion-webui/requirements.txt
+```
+
+### Using the Wheel Cache
+
+Once populated, playbooks automatically use wheels from the cache:
+
+```bash
+vagrant ssh
+cd /mnt/ansible
+
+# These will use /tmp/wheels automatically if populated
+ansible-playbook playbooks/stable_diffusion.yml --ask-become-pass
+ansible-playbook playbooks/whisper.yml --ask-become-pass
+
+# This will use /srv/rag/wheels automatically
+ansible-playbook playbooks/llm_ingest.yml --ask-become-pass
+```
+
+### Wheel Cache Locations
+
+Inside the Vagrant VM:
+- `/mnt/wheels` - Persistent shared location (survives `vagrant destroy`)
+- `/tmp/wheels` - Symlink to `/mnt/wheels` (used by SD/Whisper roles)
+- `/srv/rag/wheels` - Symlink to `/mnt/wheels` (used by RAG stack)
+
+On your host machine:
+- `vagrant/shared/wheels/` - All wheels stored here
+
+### Clearing the Cache
+
+```bash
+# From host machine
+cd vagrant/shared/wheels
+rm -f *.whl *.tar.gz
+
+# Keep the README and populate script
+```
+
+For more details, see [vagrant/shared/wheels/README.md](../shared/wheels/README.md).
 
 ---
 

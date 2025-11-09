@@ -62,7 +62,21 @@
     state: directory
     mode: '0755'
 
-- name: Clone AUTOMATIC1111 repository
+- name: Check if local git cache exists (Vagrant only)
+  ansible.builtin.stat:
+    path: /mnt/files/stable-diffusion-webui
+  register: sd_cache
+  when: is_vagrant | default(false)
+
+- name: Clone AUTOMATIC1111 repository from local cache
+  ansible.builtin.command:
+    cmd: "git clone /mnt/files/stable-diffusion-webui {{ sd_webui_root }}"
+    creates: "{{ sd_webui_root }}/.git"
+  become: true
+  become_user: sd-data
+  when: is_vagrant | default(false) and sd_cache.stat.exists | default(false)
+
+- name: Clone AUTOMATIC1111 repository from GitHub
   ansible.builtin.git:
     repo: "https://github.com/AUTOMATIC1111/stable-diffusion-webui.git"
     dest: "{{ sd_webui_root }}"
@@ -70,6 +84,7 @@
     update: no
   become: true
   become_user: sd-data
+  when: not (is_vagrant | default(false) and sd_cache.stat.exists | default(false))
 
 - name: Set up Python virtual environment
   ansible.builtin.command: python3 -m venv "{{ sd_webui_venv }}"
@@ -86,6 +101,13 @@
   ansible.builtin.stat:
     path: /tmp/wheels
   register: wheels_cache
+
+- name: Download Python wheels to cache for future use
+  ansible.builtin.command:
+    cmd: "{{ sd_webui_venv }}/bin/pip download -r {{ sd_webui_root }}/requirements.txt -d /tmp/wheels"
+  when: wheels_cache.stat.exists and wheels_cache.stat.isdir
+  ignore_errors: true
+  changed_when: false
 
 - name: Install Python requirements (cached if available)
   ansible.builtin.pip:
@@ -122,10 +144,25 @@
     state: present
     executable: "{{ sd_webui_venv }}/bin/pip"
 
-- name: Install xformers from GitHub
+- name: Check if local xformers cache exists (Vagrant only)
+  ansible.builtin.stat:
+    path: /mnt/files/xformers
+  register: xformers_cache
+  when: is_vagrant | default(false)
+
+- name: Install xformers from local cache
   pip:
-    name: git+https://github.com/facebookresearch/xformers.git
+    name: "file:///mnt/files/xformers"
     executable: "{{ sd_webui_venv }}/bin/pip"
+  when: is_vagrant | default(false) and xformers_cache.stat.exists | default(false)
+  ignore_errors: true
+
+- name: Install xformers from PyPI (compatible version with torch 2.8)
+  pip:
+    name: xformers
+    executable: "{{ sd_webui_venv }}/bin/pip"
+  when: not (is_vagrant | default(false) and xformers_cache.stat.exists | default(false))
+  ignore_errors: true
 
 - name: Create launch wrapper script
   ansible.builtin.copy:
@@ -169,13 +206,28 @@
     - "{{ sd_webui_root }}"
     - "{{ sd_webui_data_dir }}"
 
-- name: Clone ComfyUI
+- name: Check if local ComfyUI cache exists (Vagrant only)
+  ansible.builtin.stat:
+    path: /mnt/files/ComfyUI
+  register: comfy_cache
+  when: is_vagrant | default(false)
+
+- name: Clone ComfyUI from local cache
+  ansible.builtin.command:
+    cmd: "git clone /mnt/files/ComfyUI /home/sd-data/data/ComfyUI"
+    creates: /home/sd-data/data/ComfyUI/.git
+  become: true
+  become_user: sd-data
+  when: is_vagrant | default(false) and comfy_cache.stat.exists | default(false)
+
+- name: Clone ComfyUI from GitHub
   ansible.builtin.git:
     repo: https://github.com/comfyanonymous/ComfyUI.git
     dest: /home/sd-data/data/ComfyUI
     version: master
   become: true
   become_user: sd-data
+  when: not (is_vagrant | default(false) and comfy_cache.stat.exists | default(false))
 
 - name: Install ComfyUI dependencies
   ansible.builtin.pip:

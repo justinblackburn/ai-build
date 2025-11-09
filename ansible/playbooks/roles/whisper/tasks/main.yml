@@ -23,12 +23,25 @@
     name: "{{ whisper_ffmpeg_package }}"
     state: present
 
+- name: Check if local wheel cache exists
+  ansible.builtin.stat:
+    path: /tmp/wheels
+  register: wheels_cache
+
+- name: Download Whisper wheels to cache for future use
+  ansible.builtin.command:
+    cmd: "{{ whisper_venv }}/bin/pip download openai-whisper yt-dlp -d /tmp/wheels"
+  when: wheels_cache.stat.exists and wheels_cache.stat.isdir
+  ignore_errors: true
+  changed_when: false
+
 - name: Install Whisper tooling
   ansible.builtin.pip:
     name:
       - openai-whisper
       - yt-dlp
     virtualenv: "{{ whisper_venv }}"
+    extra_args: "{{ '--find-links /tmp/wheels' if wheels_cache.stat.exists else omit }}"
 
 - name: Ensure Whisper cache directory exists
   ansible.builtin.file:
