@@ -12,6 +12,12 @@
   args:
     creates: "{{ whisper_venv }}/bin/activate"
 
+- name: Upgrade pip in Whisper virtual environment
+  ansible.builtin.pip:
+    name: pip
+    state: latest
+    virtualenv: "{{ whisper_venv }}"
+
 - name: Ensure Whisper system dependencies are installed
   ansible.builtin.dnf:
     name: "{{ whisper_ffmpeg_package }}"

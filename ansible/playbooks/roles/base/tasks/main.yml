@@ -61,6 +61,13 @@
       # - neovim
     state: present
 
+- name: Upgrade pip to latest version (system-wide)
+  ansible.builtin.pip:
+    name: pip
+    state: latest
+    executable: pip3
+  ignore_errors: true
+
 - name: Ensure NVIDIA audio dependencies installed
   when: not is_vagrant | default(false)
   block:

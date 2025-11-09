@@ -1,11 +1,26 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Installing pip 25.3 from local wheelhouse..." >&2
-python -m pip install --no-index --find-links /app/wheels pip==25.3
+# Upgrade pip first (try with internet, fallback to local wheels if available)
+echo "Upgrading pip..." >&2
+if ! python -m pip install --upgrade pip; then
+  echo "Internet upgrade failed, trying local wheelhouse..." >&2
+  if [ -d /app/wheels ] && [ -n "$(ls -A /app/wheels 2>/dev/null)" ]; then
+    python -m pip install --no-index --find-links /app/wheels pip || echo "Warning: pip upgrade from wheels failed, continuing with existing pip version" >&2
+  else
+    echo "Warning: No wheels directory found, continuing with existing pip version" >&2
+  fi
+fi
 
-echo "Installing application requirements from local wheelhouse..." >&2
-python -m pip install --no-index --find-links /app/wheels -r /app/requirements.txt
+# Install application requirements
+echo "Installing application requirements..." >&2
+if [ -d /app/wheels ] && [ -n "$(ls -A /app/wheels 2>/dev/null)" ]; then
+  echo "Using local wheelhouse for air-gapped installation..." >&2
+  python -m pip install --no-index --find-links /app/wheels -r /app/requirements.txt
+else
+  echo "Installing from PyPI..." >&2
+  python -m pip install -r /app/requirements.txt
+fi
 
 echo "Waiting for Postgres at ${PG_CONN}..." >&2
 ready=0

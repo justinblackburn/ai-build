@@ -21,9 +21,13 @@ ai-build/
 ├── .env.example
 ├── .gitignore
 ├── README.md
+├── SETUP.md                    # Quick setup guide with copy-paste commands
+├── prep-setup.sh               # Automated setup script (Linux/macOS/WSL)
+├── prep-setup.ps1              # Automated setup script (Windows PowerShell)
 ├── ansible/
 │   ├── .vault_pass.txt.example
 │   ├── ansible.conf.example
+│   ├── requirements.yml        # Ansible Galaxy collections
 │   ├── inventory/              # active inventory (gitignored)
 │   ├── inventory.example/      # template inventory
 │   │   ├── group_vars/
@@ -73,7 +77,41 @@ The playbooks target RHEL 9 and derivatives with the latest stable Ansible relea
 
 ---
 
+> **Quick Setup:** See [SETUP.md](SETUP.md) for streamlined copy-paste commands and troubleshooting.
+
+---
+
 ## Quick Start
+
+### Automated Setup (Recommended)
+
+Use the automated setup script to quickly configure the repository:
+
+**Linux/macOS/WSL:**
+```bash
+git clone https://github.com/justinblackburn/ai-build.git
+cd ai-build
+bash prep-setup.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/justinblackburn/ai-build.git
+cd ai-build
+.\prep-setup.ps1
+```
+
+The setup script will:
+- Copy all example configuration files
+- Prompt for RHSM credentials
+- Generate a secure vault password
+- Install Ansible and dependencies (optional)
+- Install required Galaxy collections
+- Provide next steps and verification checklist
+
+### Manual Setup
+
+If you prefer manual configuration:
 
 1. **Clone the repo**
    ```bash
@@ -109,13 +147,19 @@ The playbooks target RHEL 9 and derivatives with the latest stable Ansible relea
    sudo dnf install -y ansible-core git
    ```
 
-7. **Run the full workstation build (become password required)**
+7. **Install required Ansible Galaxy collections**
+   ```bash
+   ansible-galaxy collection install -r ansible/requirements.yml
+   ```
+   This installs the `containers.podman` collection required for managing Podman containers and pods in the RAG stack.
+
+8. **Run the full workstation build (become password required)**
    ```bash
    ansible-playbook playbooks/install.yml --ask-become-pass
    ```
    Feel free to run individual playbooks (`base.yml`, `nvidia.yml`, `stable_diffusion.yml`, `whisper.yml`) as you iterate.
 
-8. **(Optional) Deploy the local RAG stack**
+9. **(Optional) Deploy the local RAG stack**
    ```bash
    ansible-playbook playbooks/llm_ingest.yml --ask-become-pass
    ```
@@ -189,18 +233,23 @@ The repository supports air-gapped environments through pre-staged artifacts:
 Cache dependencies before deployment:
 
 ```bash
-# For Stable Diffusion
+# Download pip wheel first (required for all installations)
 mkdir -p /tmp/wheels
+pip download pip -d /tmp/wheels
+
+# For Stable Diffusion
 cd /path/to/stable-diffusion-webui
 pip download -r requirements.txt -d /tmp/wheels
 
 # For RAG stack
 podman run --rm --security-opt label=disable \
   -v /srv/rag:/app -w /app docker.io/python:3.11 \
-  bash -lc "mkdir -p wheels && pip download -r requirements.txt -d wheels"
+  bash -lc "mkdir -p wheels && pip download pip -d wheels && pip download -r requirements.txt -d wheels"
 ```
 
-The playbooks detect cached wheels in `/tmp/wheels` (Stable Diffusion) or `/srv/rag/wheels` (RAG stack) and use them automatically via `pip install --find-links`.
+**Important:** The playbooks automatically upgrade pip before installing packages. For air-gapped environments, ensure you download the latest pip wheel to avoid dependency resolution issues.
+
+The playbooks detect cached wheels in `/tmp/wheels` (Stable Diffusion/Whisper) or `/srv/rag/wheels` (RAG stack) and use them automatically via `pip install --find-links`.
 
 ### Container Images
 Pull images ahead of time:
@@ -335,9 +384,17 @@ vault_password_file = .vault_pass.txt
 ### Vagrant Testing
 **Symptom**: Need to test playbooks without affecting production.
 
-**Solution**: Use the disposable VM at [vagrant/rhel9/](vagrant/rhel9/):
+**Solution**: Use the disposable VM at [vagrant/rhel9/](vagrant/rhel9/). See the [Vagrant README](vagrant/rhel9/README.md) for detailed installation and setup instructions, including:
+- Installing VirtualBox and Vagrant
+- Downloading the VirtualBox Guest Additions ISO
+- Configuring `.env` with RHSM credentials
+- Usage and troubleshooting tips
+
+Quick start:
 ```bash
 cd vagrant/rhel9
+cp .env.example .env
+# Edit .env with your RHSM credentials
 vagrant up
 vagrant ssh
 ```

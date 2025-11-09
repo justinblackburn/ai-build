@@ -76,6 +76,12 @@
   args:
     creates: "{{ sd_webui_venv }}/bin/activate"
 
+- name: Upgrade pip in virtual environment
+  ansible.builtin.pip:
+    name: pip
+    state: latest
+    virtualenv: "{{ sd_webui_venv }}"
+
 - name: Check if local wheel cache exists
   ansible.builtin.stat:
     path: /tmp/wheels
