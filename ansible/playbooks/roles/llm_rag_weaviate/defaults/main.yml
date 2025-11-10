@@ -1,0 +1,40 @@
+---
+# Base paths
+llm_rag_service_dir: /srv/rag
+llm_rag_doc_path: /srv/docs
+llm_rag_weaviate_data_dir: /srv/weaviate-data
+llm_rag_backup_dir: /srv/rag-backups
+llm_rag_bin_dir: /usr/local/bin
+
+# Weaviate configuration
+llm_rag_weaviate_image: semitechnologies/weaviate:latest
+llm_rag_weaviate_port: 8080
+llm_rag_weaviate_grpc_port: 50051
+llm_rag_weaviate_url: "http://localhost:{{ llm_rag_weaviate_port }}"
+
+# Pod and networking
+llm_rag_pod_name: rag-stack
+llm_rag_api_container_port: 8090
+llm_rag_api_host_port: 19090
+llm_rag_api_bind_address: 127.0.0.1
+
+# Backup configuration
+llm_rag_enable_auto_backup: true
+llm_rag_backup_schedule: "daily"
+llm_rag_backup_retention_days: 30
+
+# RAG+LLM service configuration
+llm_rag_enable_llm_service: true
+llm_rag_llm_port: 8091
+llm_rag_llm_bind_address: 127.0.0.1
+llm_rag_llm_backend: ollama  # ollama, anthropic, or openai
+
+# Ollama configuration (if using Ollama backend)
+llm_rag_ollama_url: "http://localhost:11434"
+llm_rag_ollama_model: llama2
+
+# Backend selection
+llm_rag_vector_backend: weaviate  # weaviate or postgres
+
+# Backwards-compatible alias for existing playbook variable
+rag_docs: "{{ llm_rag_doc_path }}"

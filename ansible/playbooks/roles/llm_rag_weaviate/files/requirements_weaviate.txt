@@ -1,0 +1,9 @@
+flask
+langchain
+langchain-text-splitters
+pdfminer.six
+tiktoken
+requests
+anthropic
+openai
+weaviate-client>=4.0.0

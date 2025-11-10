@@ -1,0 +1,36 @@
+---
+# Ollama Ansible Role - Default Variables
+
+# Installation
+ollama_install_method: "script"  # script, binary, or podman
+ollama_version: "latest"
+
+# Models to pull on installation
+ollama_models:
+  - llama2
+  - mistral
+
+# Service configuration
+ollama_service_enabled: true
+ollama_service_state: "started"
+
+# Network configuration
+ollama_host: "0.0.0.0"
+ollama_port: 11434
+
+# Performance settings
+ollama_num_parallel: 1  # Number of parallel requests
+ollama_num_gpu: -1      # -1 = auto-detect, 0 = CPU only, N = use N GPUs
+ollama_gpu_layers: -1   # -1 = auto, 0 = CPU only, N = offload N layers to GPU
+
+# Environment variables
+ollama_env_vars:
+  OLLAMA_HOST: "{{ ollama_host }}:{{ ollama_port }}"
+  OLLAMA_MODELS: "/usr/share/ollama/.ollama/models"
+  OLLAMA_NUM_PARALLEL: "{{ ollama_num_parallel }}"
+  OLLAMA_NUM_GPU: "{{ ollama_num_gpu }}"
+
+# Systemd service settings
+ollama_user: "ollama"
+ollama_group: "ollama"
+ollama_home: "/usr/share/ollama"

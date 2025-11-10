@@ -1,0 +1,17 @@
+---
+# Complete RAG+LLM Stack Deployment
+# Deploys Ollama + RAG service + RAG+LLM integration
+
+- name: Deploy Ollama for local LLM inference
+  hosts: localhost
+  connection: local
+  become: true
+  roles:
+    - ollama
+
+- name: Deploy RAG+LLM services
+  hosts: localhost
+  connection: local
+  become: false
+  roles:
+    - llm_rag

@@ -1,0 +1,9 @@
+---
+# Ollama Setup Playbook
+# Deploys Ollama for local LLM inference
+
+- hosts: localhost
+  connection: local
+  become: true
+  roles:
+    - ollama

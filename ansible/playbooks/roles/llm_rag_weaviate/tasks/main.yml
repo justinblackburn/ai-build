@@ -1,0 +1,234 @@
+---
+- name: Ensure data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  become: true
+  loop:
+    - "{{ llm_rag_doc_path }}"
+    - "{{ llm_rag_service_dir }}"
+    - "{{ llm_rag_weaviate_data_dir }}"
+    - "{{ llm_rag_backup_dir }}"
+    - "{{ llm_rag_bin_dir }}"
+
+- name: Deploy Weaviate-based RAG service files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ llm_rag_service_dir }}/{{ item | basename }}"
+    mode: "0644"
+  become: true
+  loop:
+    - rag_common_weaviate.py
+    - rag_service_weaviate.py
+    - ingest_docs_weaviate.py
+    - backup_rag_weaviate.sh
+    - requirements_weaviate.txt
+
+- name: Deploy common RAG files
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ llm_rag_service_dir }}/{{ item | basename }}"
+    mode: "0644"
+  become: true
+  loop:
+    - rag_llm_service.py
+    - rag_ask.py
+
+- name: Ensure RAG scripts are executable
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "0755"
+  become: true
+  loop:
+    - "{{ llm_rag_service_dir }}/ingest_docs_weaviate.py"
+    - "{{ llm_rag_service_dir }}/rag_service_weaviate.py"
+    - "{{ llm_rag_service_dir }}/rag_llm_service.py"
+    - "{{ llm_rag_service_dir }}/rag_ask.py"
+    - "{{ llm_rag_service_dir }}/backup_rag_weaviate.sh"
+
+- name: Ensure Podman runtime override directory exists
+  ansible.builtin.file:
+    path: /etc/containers/containers.conf.d
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Set Podman default runtime to crun
+  ansible.builtin.copy:
+    dest: /etc/containers/containers.conf.d/zz-llm-rag-runtime.conf
+    mode: "0644"
+    content: |
+      [engine]
+      runtime = "crun"
+  become: true
+
+- name: Provide Podman wrapper using crun runtime
+  ansible.builtin.copy:
+    dest: /usr/local/bin/podman-crun
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      exec /usr/bin/podman --runtime crun "$@"
+  become: true
+
+- name: Ensure RAG pod exists
+  containers.podman.podman_pod:
+    name: "{{ llm_rag_pod_name }}"
+    state: started
+    publish:
+      - "{{ llm_rag_api_bind_address }}:{{ llm_rag_api_host_port }}:{{ llm_rag_api_container_port }}"
+      - "127.0.0.1:{{ llm_rag_weaviate_port }}:{{ llm_rag_weaviate_port }}"
+  become: true
+
+- name: Run Weaviate vector database
+  containers.podman.podman_container:
+    name: weaviate
+    image: "{{ llm_rag_weaviate_image }}"
+    state: started
+    restart_policy: always
+    recreate: true
+    executable: /usr/local/bin/podman-crun
+    security_opt:
+      - label=disable
+    pod: "{{ llm_rag_pod_name }}"
+    env:
+      QUERY_DEFAULTS_LIMIT: "25"
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: "/var/lib/weaviate"
+      DEFAULT_VECTORIZER_MODULE: "none"
+      CLUSTER_HOSTNAME: "node1"
+    volume:
+      - "{{ llm_rag_weaviate_data_dir }}:/var/lib/weaviate"
+  become: true
+
+- name: Run RAG query service with Weaviate
+  containers.podman.podman_container:
+    name: rag_service
+    image: docker.io/python:3.11
+    command: >
+      bash -c "pip install -q -r /app/requirements_weaviate.txt &&
+      python /app/rag_service_weaviate.py"
+    state: started
+    restart_policy: always
+    recreate: true
+    executable: /usr/local/bin/podman-crun
+    security_opt:
+      - label=disable
+    pod: "{{ llm_rag_pod_name }}"
+    env:
+      WEAVIATE_URL: "http://localhost:{{ llm_rag_weaviate_port }}"
+      DOC_PATH: "{{ llm_rag_doc_path }}"
+      API_PORT: "{{ llm_rag_api_container_port }}"
+    volume:
+      - "{{ llm_rag_service_dir }}:/app"
+      - "{{ llm_rag_doc_path }}:/srv/docs:ro"
+  become: true
+
+- name: Create ingestion wrapper script
+  ansible.builtin.copy:
+    dest: "{{ llm_rag_bin_dir }}/rag-ingest"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      # Wrapper script to run RAG ingestion with Weaviate
+      exec podman exec -e WEAVIATE_URL="http://localhost:{{ llm_rag_weaviate_port }}" \
+        -e DOC_PATH="{{ llm_rag_doc_path }}" \
+        rag_service python /app/ingest_docs_weaviate.py "$@"
+  become: true
+
+- name: Create backup wrapper script
+  ansible.builtin.copy:
+    dest: "{{ llm_rag_bin_dir }}/rag-backup"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      # Wrapper script to run RAG backup
+      exec podman exec -e WEAVIATE_URL="http://localhost:{{ llm_rag_weaviate_port }}" \
+        -e BACKUP_RETENTION_DAYS="{{ llm_rag_backup_retention_days }}" \
+        rag_service bash /app/backup_rag_weaviate.sh {{ llm_rag_backup_dir }}
+  become: true
+
+- name: Create systemd service for RAG backup
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/rag-backup.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=RAG Database Backup (Weaviate)
+      After=weaviate.service
+      Requires=weaviate.service
+
+      [Service]
+      Type=oneshot
+      ExecStart={{ llm_rag_bin_dir }}/rag-backup
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+  become: true
+  when: llm_rag_enable_auto_backup | default(false)
+
+- name: Create systemd timer for RAG backup
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/rag-backup.timer
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=RAG Database Backup Timer
+      Requires=rag-backup.service
+
+      [Timer]
+      OnCalendar={{ llm_rag_backup_schedule }}
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+  become: true
+  when: llm_rag_enable_auto_backup | default(false)
+
+- name: Enable and start RAG backup timer
+  ansible.builtin.systemd:
+    name: rag-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  become: true
+  when: llm_rag_enable_auto_backup | default(false)
+
+- name: Deploy RAG+LLM service container
+  containers.podman.podman_container:
+    name: rag_llm_service
+    image: docker.io/python:3.11
+    command: >
+      bash -c "pip install -q -r /app/requirements_weaviate.txt &&
+      python /app/rag_llm_service.py"
+    state: started
+    restart_policy: always
+    recreate: true
+    executable: /usr/local/bin/podman-crun
+    security_opt:
+      - label=disable
+    publish:
+      - "{{ llm_rag_llm_bind_address }}:{{ llm_rag_llm_port }}:{{ llm_rag_llm_port }}"
+    env:
+      LLM_BACKEND: "{{ llm_rag_llm_backend }}"
+      LLM_PORT: "{{ llm_rag_llm_port }}"
+      RAG_API_URL: "http://localhost:{{ llm_rag_api_host_port }}"
+      OLLAMA_URL: "{{ llm_rag_ollama_url }}"
+      OLLAMA_MODEL: "{{ llm_rag_ollama_model }}"
+    volume:
+      - "{{ llm_rag_service_dir }}:/app"
+  become: true
+  when: llm_rag_enable_llm_service | default(true)
+
+- name: Create rag-ask CLI wrapper script
+  ansible.builtin.copy:
+    dest: "{{ llm_rag_bin_dir }}/rag-ask"
+    mode: "0755"
+    content: |
+      #!/bin/bash
+      # Wrapper script for RAG+LLM CLI
+      exec podman exec -i rag_llm_service python /app/rag_ask.py "$@"
+  become: true
+  when: llm_rag_enable_llm_service | default(true)

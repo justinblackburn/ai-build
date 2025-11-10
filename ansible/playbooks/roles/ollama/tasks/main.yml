@@ -1,0 +1,76 @@
+---
+# Ollama Installation and Configuration
+
+- name: Check if Ollama is already installed
+  ansible.builtin.command: which ollama
+  register: ollama_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Ollama via official script
+  when: ollama_check.rc != 0 and ollama_install_method == "script"
+  block:
+    - name: Download Ollama install script
+      ansible.builtin.get_url:
+        url: https://ollama.ai/install.sh
+        dest: /tmp/ollama_install.sh
+        mode: '0755'
+
+    - name: Run Ollama install script
+      ansible.builtin.command: /tmp/ollama_install.sh
+      register: ollama_install
+      changed_when: ollama_install.rc == 0
+
+    - name: Remove install script
+      ansible.builtin.file:
+        path: /tmp/ollama_install.sh
+        state: absent
+
+- name: Create Ollama systemd service override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/ollama.service.d
+    state: directory
+    mode: '0755'
+
+- name: Configure Ollama service environment
+  ansible.builtin.template:
+    src: ollama-override.conf.j2
+    dest: /etc/systemd/system/ollama.service.d/override.conf
+    mode: '0644'
+  notify: Restart Ollama service
+
+- name: Reload systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Ollama service
+  ansible.builtin.systemd:
+    name: ollama
+    enabled: "{{ ollama_service_enabled }}"
+    state: "{{ ollama_service_state }}"
+
+- name: Wait for Ollama service to be ready
+  ansible.builtin.uri:
+    url: "http://localhost:{{ ollama_port }}/api/tags"
+    method: GET
+    status_code: 200
+  register: ollama_health
+  until: ollama_health.status == 200
+  retries: 12
+  delay: 5
+
+- name: Pull Ollama models
+  ansible.builtin.command: "ollama pull {{ item }}"
+  loop: "{{ ollama_models }}"
+  register: ollama_pull
+  changed_when: "'success' in ollama_pull.stdout or 'pulling' in ollama_pull.stdout"
+  failed_when: ollama_pull.rc != 0
+
+- name: Verify installed models
+  ansible.builtin.command: ollama list
+  register: ollama_list
+  changed_when: false
+
+- name: Display installed models
+  ansible.builtin.debug:
+    msg: "{{ ollama_list.stdout_lines }}"
