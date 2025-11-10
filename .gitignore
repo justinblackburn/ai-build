@@ -102,3 +102,7 @@ vagrant/shared/
 env/
 token/
 *.token
+
+# Additional sensitive files
+ansible/.htpasswd
+ansible/ansible.conf
