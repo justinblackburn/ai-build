@@ -4,10 +4,9 @@
     path: /vagrant
   register: vagrant_dir
 
-- name: Set is_vagrant fact if /vagrant exists
+- name: Set is_vagrant fact
   set_fact:
-    is_vagrant: true
-  when: vagrant_dir.stat.exists
+    is_vagrant: "{{ vagrant_dir.stat.exists }}"
 
 - name: Debug current environment
   debug:
