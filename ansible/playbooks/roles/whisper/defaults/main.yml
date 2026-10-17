@@ -1,7 +1,8 @@
 ---
-whisper_user: sd-data
-whisper_group: sd-data
-whisper_data_dir: /home/sd-data/data
+# Whisper runs under the CallGuard model-service account (created by the users role).
+whisper_user: callguard
+whisper_group: callguard
+whisper_data_dir: /home/callguard/whisper
 whisper_venv: "{{ whisper_data_dir }}/venv"
 whisper_ffmpeg_package: ffmpeg
 whisper_cache_home: "/home/{{ whisper_user }}/.cache"
