@@ -3,7 +3,7 @@
   group:
     name: "{{ item.service_group | default(item.name) }}"
     system: "{{ item.system | default(false) }}"
-  loop: "{{ users }}"
+  loop: "{{ users_all }}"
   loop_control:
     label: "{{ item.name }}"
 
@@ -12,13 +12,14 @@
     name: "{{ item.name }}"
     password: "{{ item.password | default(omit) }}"
     shell: "{{ item.shell | default('/bin/bash') }}"
+    comment: "{{ item.comment | default(omit) }}"
     groups: "{{ item.groups | default([]) }}"
     append: yes
     create_home: yes
     home: "{{ item.home | default('/home/' + item.name) }}"
     group: "{{ item.service_group | default(item.name) }}"
     system: "{{ item.system | default(false) }}"
-  loop: "{{ users }}"
+  loop: "{{ users_all }}"
   loop_control:
     label: "{{ item.name }}"
 
@@ -30,7 +31,7 @@
     group: "{{ item.0.service_group | default(item.0.name) }}"
     mode: "0755"
   with_subelements:
-    - "{{ users }}"
+    - "{{ users_all }}"
     - directories
   loop_control:
     label: "{{ item.0.name }}: {{ item.1 }}"
@@ -51,4 +52,4 @@
   when:
     - not item.system | default(false)
     - item.enable_podman | default(false)
-  loop: "{{ users }}"
+  loop: "{{ users_all }}"
