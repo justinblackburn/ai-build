@@ -1,4 +1,9 @@
 ---
+# The inventory users plus the ollama and callguard service accounts from defaults (SCRUM-87).
+- name: Combine the inventory users with the service accounts
+  set_fact:
+    users_all: "{{ users | default([]) + users_service_accounts }}"
+
 - name: Ensure all user groups exist
   group:
     name: "{{ item.service_group | default(item.name) }}"

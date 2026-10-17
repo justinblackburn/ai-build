@@ -17,6 +17,3 @@ users_service_accounts:
     system: true
     home: /home/callguard
     directories: []
-
-# What the tasks loop over: the inventory users plus the service accounts.
-users_all: "{{ users | default([]) + users_service_accounts }}"
