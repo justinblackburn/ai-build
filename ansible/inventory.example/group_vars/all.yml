@@ -8,6 +8,9 @@ is_vagrant: false
 rhsm_org: "YOUR_RED_HAT_ORG_ID"
 rhsm_key: "YOUR_REDHAT_ACTIVATION_KEY"
 
+# Stable Diffusion is off by default. Set true only to install it (install.yml gates the role on this).
+stable_diffusion_enabled: false
+
 # Stable Diffusion / Whisper paths
 sd_webui_root: "/opt/stable-diffusion-webui"
 sd_webui_data_dir: "/home/sd-data/data"
@@ -16,16 +19,8 @@ sd_webui_data_dir: "/home/sd-data/data"
 nvidia_driver_url: "https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run"
 nvidia_driver_file: "{{ nvidia_driver_url | basename }}"
 
-# Service accounts and users created by the users role.
-users:
-  - name: sd-data
-    comment: "Stable Diffusion / Whisper service account"
-    shell: /bin/bash
-    system: true
-    enable_podman: true
-    directories:
-      - /home/sd-data
-      - /home/sd-data/data
+# Service accounts and users created by the users role. The sd-data account is removed with Stable Diffusion.
+users: []
 
 # Local RAG stack configuration
 llm_rag_pg_user: aiuser
