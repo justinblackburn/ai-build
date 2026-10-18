@@ -57,8 +57,14 @@
       become: true
       notify: Rebuild initramfs after nouveau blacklist
 
-    - name: Attempt to unload nouveau module (best effort)
+    - name: Check whether nouveau is loaded
+      ansible.builtin.command: lsmod
+      register: nouveau_loaded
+      changed_when: false
+
+    - name: Attempt to unload nouveau module (best effort, only when loaded)
       ansible.builtin.command: modprobe -r nouveau
+      when: "'nouveau' in (nouveau_loaded.stdout | default(''))"
       register: nouveau_remove
       changed_when: nouveau_remove.rc == 0
       failed_when: nouveau_remove.rc not in [0, 1]
