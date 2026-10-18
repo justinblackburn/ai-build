@@ -1,6 +1,6 @@
 # ai-build
 
-Automation for a reproducible AI workstation on **RHEL 9**. The playbooks in this repo configure the base OS, GPU drivers, container tooling, Stable Diffusion, Whisper transcription, and local RAG infrastructure so you can rebuild the stack from bare metal in a few commands.
+Automation for a reproducible AI workstation on **RHEL 9**. The playbooks in this repo configure the base OS, GPU drivers and container tooling so you can rebuild the stack from bare metal in a few commands.
 
 ---
 
@@ -36,7 +36,6 @@ ai-build/
 │       ├── llm_ingest.yml      # RAG stack provisioning
 │       ├── nvidia.yml
 │       ├── podman.yml
-│       ├── stable_diffusion.yml
 │       ├── users.yml
 │       ├── whisper.yml
 │       └── roles/
@@ -48,7 +47,6 @@ ai-build/
 │           │   └── tasks/
 │           ├── nvidia/
 │           ├── podman/
-│           ├── stable_diffusion/
 │           ├── users/
 │           └── whisper/
 ├── files/
@@ -116,7 +114,6 @@ The playbooks target RHEL 9 and derivatives with the latest stable Ansible relea
    ```bash
    ansible-playbook playbooks/install.yml --ask-become-pass
    ```
-   Feel free to run individual playbooks (`base.yml`, `nvidia.yml`, `stable_diffusion.yml`, `whisper.yml`) as you iterate.
 
 8. **(Optional) Deploy the local RAG stack**
    ```bash
@@ -134,8 +131,6 @@ The playbooks target RHEL 9 and derivatives with the latest stable Ansible relea
 | `users` | [playbooks/users.yml](ansible/playbooks/users.yml) | Provisions service and interactive accounts, home directories, lingering, and sudo policy. |
 | `podman` | [playbooks/podman.yml](ansible/playbooks/podman.yml) | Installs Podman + podman-compose, enables the rootless socket, and writes user-level container configs. |
 | `nvidia` | [playbooks/nvidia.yml](ansible/playbooks/nvidia.yml) | Blacklists nouveau, rebuilds initramfs, installs RPMFusion/NVIDIA drivers, container toolkit, and configures HDMI audio. |
-| `stable_diffusion` | [playbooks/stable_diffusion.yml](ansible/playbooks/stable_diffusion.yml) | Clones AUTOMATIC1111 and ComfyUI, prepares the Python venv, installs xformers from source, and drops hardened launch scripts. |
-| `whisper` | [playbooks/whisper.yml](ansible/playbooks/whisper.yml) | Creates or reuses the service venv, installs `openai-whisper` + `yt-dlp`, and supplies helper scripts for audio and YouTube transcription. |
 | `llm_rag` | [playbooks/llm_ingest.yml](ansible/playbooks/llm_ingest.yml) | Deploys a local RAG stack using Podman (PostgreSQL + pgvector + Flask ingestion service) for air-gapped document retrieval. See [roles/llm_rag/README.md](ansible/playbooks/roles/llm_rag/README.md). |
 
 The composite [playbooks/install.yml](ansible/playbooks/install.yml) runs the core roles in order for a turnkey deployment. The RAG stack is deployed separately via `llm_ingest.yml` to allow independent provisioning and updates.

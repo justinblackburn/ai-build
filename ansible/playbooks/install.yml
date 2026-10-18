@@ -7,7 +7,4 @@
     - users
     - podman
     - nvidia
-    - role: stable_diffusion
-      when: stable_diffusion_enabled | default(false)
-    - whisper
     # - llm

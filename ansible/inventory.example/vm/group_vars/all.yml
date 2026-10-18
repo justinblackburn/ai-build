@@ -8,8 +8,6 @@ is_vagrant: false
 rhsm_org: "CHANGE_ME"
 rhsm_key: "CHANGE_ME"
 
-# Stable Diffusion is off by default.
-stable_diffusion_enabled: false
 
 # Service accounts (ollama, callguard) come from the users role's users_service_accounts default.
 users: []
