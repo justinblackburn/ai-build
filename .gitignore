@@ -103,3 +103,6 @@ vagrant/shared/
 env/
 token/
 *.token
+
+# Basic-auth credentials (local only, never in git)
+.htpasswd
