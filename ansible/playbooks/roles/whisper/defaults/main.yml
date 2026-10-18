@@ -5,7 +5,11 @@ whisper_group: callguard
 whisper_data_dir: /home/callguard/whisper
 whisper_venv: "{{ whisper_data_dir }}/venv"
 whisper_ffmpeg_package: ffmpeg
-whisper_cache_home: "/home/{{ whisper_user }}/.cache"
+# Python for the Whisper venv. RHEL 9 python3 is 3.9; current openai-whisper needs a newer Python.
+whisper_python: python3.11
+# One cache root per environment (SCRUM-89): metal ~/github/.cache, VM /mnt/.cache (set in the inventory).
+cache_root: "{{ ansible_env.HOME }}/github/.cache"
+whisper_cache_home: "{{ cache_root }}"
 whisper_cache_dir: "{{ whisper_cache_home }}/whisper"
 whisper_models:
   - tiny
