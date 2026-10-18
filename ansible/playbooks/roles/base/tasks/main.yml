@@ -15,6 +15,7 @@
 - name: Check if system is already registered
   command: subscription-manager identity
   register: rhsm_identity
+  changed_when: false
   ignore_errors: true
 
 - name: Register system with Red Hat (only if not already registered)
@@ -25,9 +26,10 @@
   when: rhsm_identity.rc != 0
   ignore_errors: true
 
-- name: Enable CodeReady Builder repo
+- name: Enable CodeReady Builder repo (idempotent, enabling an enabled repo changes nothing)
   command: >
     subscription-manager repos --enable "codeready-builder-for-rhel-9-{{ ansible_architecture }}-rpms"
+  changed_when: false
   ignore_errors: true
 
 - name: Import EPEL GPG key

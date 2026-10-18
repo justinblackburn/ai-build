@@ -52,9 +52,17 @@
     path: /bin/loginctl
   register: loginctl_bin
 
-- name: Enable lingering for users
-  command: loginctl enable-linger {{ item.name }}
+- name: Read lingering state for users that run podman
+  command: loginctl show-user {{ item.name }} -p Linger --value
+  register: users_linger_state
+  changed_when: false
+  failed_when: false
   when:
     - not item.system | default(false)
     - item.enable_podman | default(false)
   loop: "{{ users_all }}"
+
+# Only the users whose lingering is off are changed, so a second run reports changed=0.
+- name: Enable lingering for users where it is off
+  command: loginctl enable-linger {{ item.item.name }}
+  loop: "{{ users_linger_state.results | selectattr('stdout', 'defined') | selectattr('stdout', 'equalto', 'no') | list }}"
