@@ -7,8 +7,15 @@
     group: "{{ whisper_group }}"
     mode: '0755'
 
+- name: Install Python for the Whisper venv (RHEL 9 default python3 is too old for current openai-whisper)
+  ansible.builtin.dnf:
+    name:
+      - "{{ whisper_python }}"
+      - "{{ whisper_python }}-pip"
+    state: present
+
 - name: Ensure Whisper virtual environment exists
-  ansible.builtin.command: python3 -m venv "{{ whisper_venv }}"
+  ansible.builtin.command: "{{ whisper_python }} -m venv {{ whisper_venv }}"
   args:
     creates: "{{ whisper_venv }}/bin/activate"
 
