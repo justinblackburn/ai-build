@@ -1,0 +1,3 @@
+---
+# Set to false where Red Hat subscription registration cannot run (a molecule container). Metal and the VM keep true.
+base_rhsm_enabled: true

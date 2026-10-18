@@ -2,11 +2,11 @@
 - name: Detect if running in Vagrant
   stat:
     path: /vagrant
-  register: vagrant_dir
+  register: base_vagrant_dir
 
 - name: Set is_vagrant fact
-  set_fact:
-    is_vagrant: "{{ vagrant_dir.stat.exists }}"
+  ansible.builtin.set_fact:
+    is_vagrant: "{{ base_vagrant_dir.stat.exists }}"  # noqa: var-naming[no-role-prefix]  (shared fact: every role and inventory reads it)
 
 - name: Debug current environment
   debug:
@@ -14,16 +14,19 @@
 
 - name: Check if system is already registered
   command: subscription-manager identity
-  register: rhsm_identity
+  register: base_rhsm_identity
   changed_when: false
   ignore_errors: true
+  when: base_rhsm_enabled | default(true) | bool
 
 - name: Register system with Red Hat (only if not already registered)
   command: >
     subscription-manager register
     --org {{ rhsm_org }}
     --activationkey {{ rhsm_key }}
-  when: rhsm_identity.rc != 0
+  when:
+    - base_rhsm_enabled | default(true) | bool
+    - base_rhsm_identity.rc != 0
   ignore_errors: true
 
 - name: Enable CodeReady Builder repo (idempotent, enabling an enabled repo changes nothing)
@@ -31,6 +34,7 @@
     subscription-manager repos --enable "codeready-builder-for-rhel-9-{{ ansible_architecture }}-rpms"
   changed_when: false
   ignore_errors: true
+  when: base_rhsm_enabled | default(true) | bool
 
 - name: Import EPEL GPG key
   ansible.builtin.rpm_key:
@@ -56,7 +60,7 @@
       - python3-pip
       - git
       - wget
-      - curl
+      # curl is not listed: RHEL ships curl or curl-minimal, and a container image ships curl-minimal (they conflict)
       - zsh
       - ansible-core
       # containers.podman for the infra playbooks: ansible loads their modules before the prerequisites role runs
@@ -71,14 +75,14 @@
       ansible.builtin.dnf:
         name: "kernel-modules-extra-{{ ansible_kernel }}"
         state: present
-      register: kernel_modules_extra_result
+      register: base_kernel_modules_extra_result
       ignore_errors: true
 
     - name: Install generic kernel-modules-extra package as fallback
       ansible.builtin.dnf:
         name: kernel-modules-extra
         state: present
-      when: kernel_modules_extra_result is failed
+      when: base_kernel_modules_extra_result is failed
 
 - name: Load NVIDIA HDA audio modules (best effort)
   ansible.builtin.shell: |

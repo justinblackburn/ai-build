@@ -9,6 +9,7 @@ nvidia_container_repo_url: "https://nvidia.github.io/libnvidia-container/stable/
 # The driver comes from NVIDIA's own RHEL repo, pinned to one version. The kernel module is the DKMS build
 # (kmod-nvidia-open-dkms), so it rebuilds on every kernel update. Change the version here, in one place.
 nvidia_driver_version: "615.71.09"
+# yamllint disable-line rule:line-length
 nvidia_cuda_repo_url: "https://developer.download.nvidia.com/compute/cuda/repos/rhel{{ nvidia_repo_el_version }}/{{ ansible_architecture }}/cuda-rhel{{ nvidia_repo_el_version }}.repo"
 
 # Removes the installed NVIDIA packages and artifacts before reinstalling. Off by default: a normal run never

@@ -19,4 +19,4 @@ users_service_accounts:
     directories: []
 
 # Extra users from the inventory. Empty by default, so a host that lists none (the VM) still runs (SCRUM-87).
-users: []
+users: []  # noqa: var-naming[no-role-prefix]  (inventory interface; every inventory sets it)

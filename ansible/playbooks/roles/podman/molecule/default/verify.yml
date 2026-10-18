@@ -1,0 +1,35 @@
+---
+- name: Verify podman role
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert podman and runc are installed
+      ansible.builtin.assert:
+        that:
+          - "'podman' in ansible_facts.packages"
+          - "'runc' in ansible_facts.packages"
+        fail_msg: "podman or runc is not installed"
+
+    - name: podman runs
+      ansible.builtin.command: podman --version
+      changed_when: false
+
+    - name: podman-compose is installed
+      ansible.builtin.command: pip3 show podman-compose
+      changed_when: false
+
+    - name: The rootless containers.conf is written for the test user
+      ansible.builtin.slurp:
+        src: /home/podtest/.config/containers/containers.conf
+      register: podman_rootless_conf
+      become: true
+
+    - name: Assert the rootless config sets runc and journald
+      ansible.builtin.assert:
+        that:
+          - "'runtime = \"runc\"' in (podman_rootless_conf.content | b64decode)"
+          - "'events_logger = \"journald\"' in (podman_rootless_conf.content | b64decode)"

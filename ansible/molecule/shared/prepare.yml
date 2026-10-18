@@ -1,0 +1,29 @@
+---
+# Shared prepare for every role scenario.
+# Makes a RHEL 9 container look like a real host: python3 for Ansible, sudo,
+# and a regular user (builder) that the roles run as, matching the real hosts.
+- name: Prepare RHEL 9 container
+  hosts: all
+  gather_facts: false
+  vars:
+    # Bootstrap runs as root; roles then run as the regular user (ansible_user in molecule.yml).
+    ansible_user: root
+
+  tasks:
+    # ubi-init ships curl-minimal, which provides /usr/bin/curl; installing "curl" conflicts with it.
+    - name: Install python3, sudo, tar (raw, before python exists)
+      ansible.builtin.raw: dnf install -y python3 sudo tar gzip procps-ng
+      changed_when: true
+
+    - name: Create the regular user the roles run as
+      ansible.builtin.user:
+        name: builder
+        shell: /bin/bash
+        create_home: true
+
+    - name: Allow builder to sudo without a password (roles use become for dnf and systemd)
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/builder
+        content: "builder ALL=(ALL) NOPASSWD: ALL\n"
+        mode: "0440"
+        validate: "visudo -cf %s"

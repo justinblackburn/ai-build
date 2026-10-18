@@ -1,0 +1,27 @@
+---
+# Molecule scenario for the podman role.
+# Shared settings (keep identical across roles' molecule.yml files):
+#   driver podman, image ubi9-init (systemd), sequence converge -> idempotence -> verify.
+# Run through the repo Makefile: cd ansible && make test ROLE=podman
+driver:
+  name: podman
+
+platforms:
+  - name: ${MOLECULE_RUN_ID:-local}-podman-ubi9
+    image: registry.access.redhat.com/ubi9/ubi-init
+    command: /usr/sbin/init
+    privileged: true
+
+provisioner:
+  name: ansible
+  playbooks:
+    prepare: ../../../../../molecule/shared/prepare.yml
+    converge: converge.yml
+    verify: verify.yml
+  inventory:
+    host_vars:
+      ${MOLECULE_RUN_ID:-local}-podman-ubi9:
+        ansible_user: builder
+
+verifier:
+  name: ansible

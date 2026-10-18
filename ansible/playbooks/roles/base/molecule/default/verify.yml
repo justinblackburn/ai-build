@@ -1,0 +1,37 @@
+---
+- name: Verify base role
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert the core tools are installed
+      ansible.builtin.assert:
+        that:
+          - "'{{ item }}' in ansible_facts.packages"
+        fail_msg: "{{ item }} is not installed; the base role did not install it"
+      loop:
+        - git
+        - wget
+        - zsh
+        - ansible-core
+        - python3-pip
+
+    - name: EPEL repo file is present
+      ansible.builtin.stat:
+        path: /etc/yum.repos.d/epel.repo
+      register: base_epel_repo
+
+    - name: Assert EPEL repo file exists
+      ansible.builtin.assert:
+        that: base_epel_repo.stat.exists
+        fail_msg: "EPEL repo file missing; the base role did not install EPEL"
+
+    - name: Assert RPM Fusion free and the containers.podman collection package are installed
+      ansible.builtin.assert:
+        that:
+          - "'rpmfusion-free-release' in ansible_facts.packages"
+          - "'ansible-collection-containers-podman' in ansible_facts.packages"
+        fail_msg: "RPM Fusion free or the containers.podman collection package is missing"
