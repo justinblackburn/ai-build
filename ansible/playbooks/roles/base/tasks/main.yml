@@ -57,6 +57,8 @@
       - curl
       - zsh
       - ansible-core
+      # containers.podman for the infra playbooks: ansible loads their modules before the prerequisites role runs
+      - ansible-collection-containers-podman
       # - neovim
     state: present
 
