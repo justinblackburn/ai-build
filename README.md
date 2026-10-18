@@ -25,10 +25,10 @@ ai-build/
 │   ├── .vault_pass.txt.example
 │   ├── ansible.conf.example
 │   ├── inventory/              # active inventory (gitignored)
-│   ├── inventory.example/      # template inventory
-│   │   ├── group_vars/
-│   │   │   └── all.yml
-│   │   └── hosts.yml
+│   ├── inventory.example/      # template inventories: bare-metal/ and vm/
+│   │   ├── README.md
+│   │   ├── bare-metal/         # hosts.yml, group_vars/, host_vars/
+│   │   └── vm/                 # hosts.yml, group_vars/, host_vars/
 │   └── playbooks/
 │       ├── README.md           # RAG stack deployment guide
 │       ├── base.yml
@@ -86,13 +86,16 @@ The playbooks target RHEL 9 and derivatives with the latest stable Ansible relea
    cp .env.example .env
    cp ansible/ansible.conf.example ansible/ansible.cfg
    cp ansible/.vault_pass.txt.example ansible/.vault_pass.txt
-   cp -R ansible/inventory.example ansible/inventory
+   # Bare metal (the GPU host):
+   cp -R ansible/inventory.example/bare-metal ansible/inventory
+   # Or the Vagrant VM (the VM inventory is mounted into it):
+   # cp -R ansible/inventory.example/vm ansible/inventory
    ```
 
 3. **Edit the inventory**
-   - Set your Red Hat subscription org/key in [ansible/inventory/group_vars/all.yml](ansible/inventory/group_vars/all.yml).
+   - Set your Red Hat subscription org and key in `ansible/inventory/group_vars/all.yml`, as vault values (see [ansible/inventory.example/README.md](ansible/inventory.example/README.md)).
    - Adjust paths (e.g. `sd_webui_root`, `sd_webui_data_dir`) or add additional users if needed.
-   - For RAG stack deployment, configure `llm_rag_*` variables (see [Variable Reference](#variable-reference)).
+   - For RAG stack deployment, set `llm_rag_*` variables. The database password is a vault value.
 
 4. **Secure the vault password**
    - Replace the placeholder in `ansible/.vault_pass.txt` with a unique value.

@@ -4,9 +4,17 @@ nvidia_repo_el_version: "9"
 nvidia_install_gpu_drivers: true
 nvidia_install_container_toolkit: true
 nvidia_container_runtime_path: /usr/bin/nvidia-container-runtime
-nvidia_rpmfusion_repo_url: "https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-{{ nvidia_repo_el_version }}.noarch.rpm"
 nvidia_container_repo_url: "https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo"
+
+# The driver comes from NVIDIA's own RHEL repo, pinned to one version. The kernel module is the DKMS build
+# (kmod-nvidia-open-dkms), so it rebuilds on every kernel update. Change the version here, in one place.
+nvidia_driver_version: "615.71.09"
+nvidia_cuda_repo_url: "https://developer.download.nvidia.com/compute/cuda/repos/rhel{{ nvidia_repo_el_version }}/{{ ansible_architecture }}/cuda-rhel{{ nvidia_repo_el_version }}.repo"
+
+# Removes the installed NVIDIA packages and artifacts before reinstalling. Off by default: a normal run never
+# uninstalls the driver. Set it on the command line only when a clean reinstall is intended.
 nvidia_force_clean_reinstall: false
+
 nvidia_kernel_args:
   - rd.driver.blacklist=nouveau
   - modprobe.blacklist=nouveau

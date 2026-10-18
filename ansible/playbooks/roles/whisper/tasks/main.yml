@@ -14,10 +14,38 @@
       - "{{ whisper_python }}-pip"
     state: present
 
+# A venv built with another Python (for example the RHEL 9 default 3.9) is removed and rebuilt, so the
+# playbook converges on the pinned version and a second run changes nothing.
+- name: Check the Python version of the existing Whisper venv
+  ansible.builtin.command: "{{ whisper_venv }}/bin/python -c 'import sys; print(\"%d.%d\" % sys.version_info[:2])'"
+  register: whisper_venv_python
+  changed_when: false
+  failed_when: false
+
+- name: Remove the Whisper venv when it was built with the wrong Python
+  ansible.builtin.file:
+    path: "{{ whisper_venv }}"
+    state: absent
+  when:
+    - whisper_venv_python.rc == 0
+    - whisper_venv_python.stdout != whisper_python_version
+
 - name: Ensure Whisper virtual environment exists
   ansible.builtin.command: "{{ whisper_python }} -m venv {{ whisper_venv }}"
   args:
     creates: "{{ whisper_venv }}/bin/activate"
+
+- name: Assert the Whisper venv runs the pinned Python
+  ansible.builtin.command: "{{ whisper_venv }}/bin/python -c 'import sys; print(\"%d.%d\" % sys.version_info[:2])'"
+  register: whisper_venv_check
+  changed_when: false
+
+- name: Fail if the Whisper venv does not run the pinned Python
+  ansible.builtin.assert:
+    that:
+      - whisper_venv_check.stdout == whisper_python_version
+    fail_msg: "Whisper venv runs Python {{ whisper_venv_check.stdout }}; expected {{ whisper_python_version }}"
+    success_msg: "Whisper venv runs Python {{ whisper_venv_check.stdout }}"
 
 - name: Ensure Whisper system dependencies are installed
   ansible.builtin.dnf:

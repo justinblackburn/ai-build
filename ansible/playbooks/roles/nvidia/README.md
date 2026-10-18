@@ -12,7 +12,7 @@ The `nvidia` role provides complete NVIDIA GPU support:
 |-----------|-------------|
 | **Driver Detection** | Automatically detects NVIDIA GPUs via `lspci` |
 | **Nouveau Blacklist** | Disables the open-source nouveau driver that conflicts with NVIDIA |
-| **akmod Drivers** | Installs RPMFusion akmod-nvidia packages that compile on kernel updates |
+| **Pinned driver** | Installs driver 615.71.09 from NVIDIA's RHEL repo (`nvidia_driver_version`), with the DKMS kernel module that rebuilds on kernel updates, and locks the packages |
 | **Container Toolkit** | Enables GPU passthrough for Podman containers |
 | **Clean Reinstall** | Automated cleanup mode for fixing driver issues |
 | **Kernel Arguments** | Applies boot parameters for NVIDIA driver loading and modesetting |
@@ -35,7 +35,8 @@ nvidia_install_container_toolkit: true         # Install NVIDIA Container Toolki
 nvidia_container_runtime_path: /usr/bin/nvidia-container-runtime
 
 # Repository URLs
-nvidia_rpmfusion_repo_url: "https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-9.noarch.rpm"
+nvidia_driver_version: "615.71.09"
+nvidia_cuda_repo_url: "https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo"
 nvidia_container_repo_url: "https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo"
 
 # Troubleshooting
@@ -86,9 +87,9 @@ dracut --force
 
 ### 5. Driver Installation
 - Installs kernel development packages (kernel-devel, kernel-headers, gcc, make)
-- Adds RPMFusion free and nonfree repositories with GPG key verification
-- Installs akmod-nvidia and xorg-x11-drv-nvidia-cuda packages
-- Triggers akmod rebuild handler to compile modules immediately
+- Adds NVIDIA's CUDA RHEL 9 repo (driver source)
+- Installs `nvidia-driver-<version>` and `kmod-nvidia-open-dkms-<version>` at the pinned version, then locks them with versionlock
+- The DKMS module builds during the install and rebuilds on kernel updates
 
 ### 6. Kernel Arguments
 Applies NVIDIA-specific boot parameters via grubby:
@@ -109,7 +110,7 @@ If `nvidia_install_container_toolkit: true`:
 - RHEL 9.x with NVIDIA GPU hardware
 - `base` role completed (provides EPEL and development tools)
 - Network access to:
-  - `download1.rpmfusion.org` (driver packages)
+  - `developer.download.nvidia.com` (driver packages)
   - `nvidia.github.io` (container toolkit)
 - Secure Boot **disabled** or NVIDIA modules signed (akmods require unsigned module loading by default)
 
@@ -300,16 +301,17 @@ The role includes two handlers triggered on configuration changes:
 ### `Rebuild initramfs after nouveau blacklist`
 Runs `dracut --force` to regenerate initramfs when blacklist config changes.
 
-### `Rebuild NVIDIA akmods`
-Executes `akmods --force` to compile NVIDIA kernel modules immediately after driver installation.
-
 ---
 
 ## Architecture Notes
 
-### Why akmod-nvidia Instead of DKMS?
+### Why NVIDIA's repo and DKMS?
 
-RPMFusion's akmod-nvidia automatically rebuilds kernel modules during kernel package updates via RPM hooks, eliminating the need for manual intervention. DKMS is explicitly commented out in the role.
+The driver comes from NVIDIA's own repo so the version can be pinned to match the CUDA wheels. The DKMS module (`kmod-nvidia-open-dkms`) rebuilds on every kernel update, so no manual step is needed.
+
+### Clean reinstall
+
+A normal run never removes the driver. A clean reinstall (removing packages and artifacts first) runs only with `nvidia_force_clean_reinstall: true`.
 
 ### Why Two Blacklist Methods?
 

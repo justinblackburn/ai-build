@@ -16,33 +16,17 @@
     - nvidia_gpu_present | default(false)
   block:
 
-    - name: Check if nouveau is still present in initramfs
-      ansible.builtin.shell: "lsinitrd /boot/initramfs-$(uname -r).img | grep -q nouveau"
-      register: nvidia_nouveau_initramfs
-      changed_when: false
-      failed_when: false
-      become: true
-
-    - name: Check if NVIDIA kernel module is available
-      ansible.builtin.command: modinfo nvidia
-      register: nvidia_modinfo
-      changed_when: false
-      failed_when: false
-      become: true
-
-    - name: Determine if a clean NVIDIA reinstall is required
+    # Only the force flag asks for a clean reinstall. A run never decides that from the state of the module
+    # (a missing module used to trigger it, which removed the working driver).
+    - name: Set the clean-reinstall flag from the force variable only
       ansible.builtin.set_fact:
-        nvidia_clean_reinstall: >-
-          {{
-            nvidia_force_clean_reinstall | bool
-            or (nvidia_nouveau_initramfs.rc | default(1)) == 0
-            or (nvidia_modinfo.rc | default(1)) != 0
-          }}
+        nvidia_clean_reinstall: "{{ nvidia_force_clean_reinstall | bool }}"
 
-    - name: Remove conflicting NVIDIA packages when rebuild required
+    - name: Remove NVIDIA packages for a forced clean reinstall
       ansible.builtin.dnf:
         name:
           - nvidia-driver*
+          - kmod-nvidia*
           - akmod-nvidia*
           - xorg-x11-drv-nvidia*
           - nvidia-settings*
@@ -50,34 +34,16 @@
           - nvidia-persistenced*
         state: absent
       become: true
-      when: nvidia_clean_reinstall | default(false)
+      when: nvidia_clean_reinstall | bool
 
-    - name: Remove stale NVIDIA artifacts
+    - name: Remove stale NVIDIA artifacts for a forced clean reinstall
       ansible.builtin.shell: |
         set -euo pipefail
         rm -rf /usr/lib/modules/{{ ansible_kernel }}/extra/nvidia*
         rm -rf /var/lib/dkms/nvidia*
-        rm -rf /var/cache/akmods/*
-        rm -rf /var/tmp/akmodsbuild*
         rm -f /etc/modprobe.d/nvidia*.conf
       become: true
-      when: nvidia_clean_reinstall | default(false)
-
-    - name: Ensure akmods cache directories exist
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-      loop:
-        - /var/cache/akmods
-        - /var/tmp/akmodsbuild
-      become: true
-      when: nvidia_clean_reinstall | default(false)
-
-    - name: Rebuild initramfs after cleanup
-      ansible.builtin.command: dracut --force
-      become: true
-      when: nvidia_clean_reinstall | default(false)
+      when: nvidia_clean_reinstall | bool
 
     - name: Disable nouveau kernel module
       ansible.builtin.copy:
@@ -99,14 +65,13 @@
       become: true
       ignore_errors: true
 
-    - name: Install kernel headers and dev tools
+    - name: Install kernel headers and dev tools (the DKMS build needs them)
       dnf:
         name:
           - kernel-devel
           - kernel-headers
           - gcc
           - make
-          # - dkms
         state: present
 
     - name: Import EPEL GPG key
@@ -119,34 +84,33 @@
         name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ nvidia_repo_el_version }}.noarch.rpm"
         state: present
 
-    - name: Import RPMFusion free GPG key
-      ansible.builtin.rpm_key:
-        state: present
-        key: "https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-free-el-{{ ansible_distribution_major_version }}"
+    - name: Add the NVIDIA CUDA repo (driver source)
+      ansible.builtin.get_url:
+        url: "{{ nvidia_cuda_repo_url }}"
+        dest: "/etc/yum.repos.d/cuda-rhel{{ nvidia_repo_el_version }}.repo"
+        mode: '0644'
+      become: true
 
-    - name: Import RPMFusion nonfree GPG key
-      ansible.builtin.rpm_key:
-        state: present
-        key: "https://rpmfusion.org/keys?action=AttachFile&do=get&target=RPM-GPG-KEY-rpmfusion-nonfree-el-{{ ansible_distribution_major_version }}"
-
-    - name: Install RPMFusion free repo
+    - name: Install the versionlock plugin so the driver version stays pinned
       ansible.builtin.dnf:
-        name: "https://download1.rpmfusion.org/free/el/rpmfusion-free-release-{{ ansible_distribution_major_version }}.noarch.rpm"
+        name: python3-dnf-plugin-versionlock
         state: present
 
-    - name: Install RPMFusion nonfree repo
-      ansible.builtin.dnf:
-        name: "https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-{{ ansible_distribution_major_version }}.noarch.rpm"
-        state: present
-
-    - name: Install NVIDIA driver packages
+    - name: Install the pinned NVIDIA driver (userspace, nvidia-smi and libcuda, DKMS kernel module)
       ansible.builtin.dnf:
         name:
-          - akmod-nvidia
-          - xorg-x11-drv-nvidia-cuda
+          - "nvidia-driver-{{ nvidia_driver_version }}"
+          - "nvidia-driver-cuda-{{ nvidia_driver_version }}"
+          - "nvidia-driver-cuda-libs-{{ nvidia_driver_version }}"
+          - "kmod-nvidia-open-dkms-{{ nvidia_driver_version }}"
         state: present
-      register: nvidia_driver_install
-      notify: Rebuild NVIDIA akmods
+        disable_gpg_check: false
+      become: true
+
+    - name: Lock the NVIDIA driver packages at the pinned version (dnf update leaves them alone)
+      ansible.builtin.command: "dnf versionlock add nvidia-driver nvidia-driver-cuda nvidia-driver-cuda-libs kmod-nvidia-open-dkms"
+      changed_when: false
+      become: true
 
     - name: Ensure NVIDIA kernel arguments are set
       ansible.builtin.command: grubby --info=ALL

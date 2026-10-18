@@ -1,0 +1,31 @@
+---
+# Settings shared by every host in this inventory.
+# Passwords and keys are not stored in plain text. Each one is a vault value: see ../../README.md in this folder.
+
+# Red Hat subscription (vault values)
+enable_subscription: true
+is_vagrant: false
+rhsm_org: "CHANGE_ME"
+rhsm_key: "CHANGE_ME"
+
+# Stable Diffusion is off by default. install.yml gates the role on this.
+stable_diffusion_enabled: false
+sd_webui_root: "/opt/stable-diffusion-webui"
+sd_webui_data_dir: "/home/sd-data/data"
+
+# Service accounts (ollama, callguard) come from the users role's users_service_accounts default.
+# Do not list them here.
+users: []
+
+# NVIDIA driver: 615.71.09 from NVIDIA's RHEL 9 repo, pinned in roles/nvidia/defaults/main.yml.
+# Change it there, not here.
+
+# RAG stack. The database password is a vault value.
+llm_rag_pg_user: aiuser
+llm_rag_pg_password: "CHANGE_ME"
+llm_rag_pg_database: ai_context
+llm_rag_pg_port: 5432
+llm_rag_pg_host: localhost
+llm_rag_api_host_port: 19090
+llm_rag_api_container_port: 8090
+llm_rag_doc_path: /srv/docs
