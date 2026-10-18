@@ -1,0 +1,18 @@
+---
+# The Vagrant VM (hosts.yml name: default).
+
+# The VM listens on its network address, so the Vagrant port forwards reach its services.
+ollama_host: 0.0.0.0
+llm_rag_api_bind_address: 0.0.0.0
+llm_rag_llm_bind_address: 0.0.0.0
+
+# Models. The VM uses the smaller model.
+ollama_additional_models:
+  - qwen3:1.7b
+llm_rag_ollama_model: qwen3:1.7b
+
+# Download cache. The Vagrantfile rsyncs the bare-metal ~/github/.cache into /var/tmp/.cache (one copy in the
+# guest). The Ollama models are synced into ollama_models_dir, and the ollama-models-owner step gives them to the
+# ollama account.
+cache_root: /var/tmp/.cache
+ollama_models_dir: /var/tmp/.cache/ollama/models

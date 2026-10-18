@@ -2,7 +2,3 @@
 - name: Rebuild initramfs after nouveau blacklist
   ansible.builtin.command: dracut -f
   become: true
-
-- name: Rebuild NVIDIA akmods
-  ansible.builtin.command: akmods --force
-  become: true

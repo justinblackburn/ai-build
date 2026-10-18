@@ -1,0 +1,24 @@
+---
+# The bare-metal GPU host (RTX 4080 SUPER).
+
+# Ollama and the RAG/LLM services bind to all addresses, so the containers can reach them through
+# host.containers.internal. The firewalld public zone (where the LAN interfaces sit) keeps ports 11434, 19090 and
+# 8091 closed to the LAN. Check that rule before you change these to 0.0.0.0.
+ollama_host: 0.0.0.0
+llm_rag_api_bind_address: 0.0.0.0
+llm_rag_llm_bind_address: 0.0.0.0
+
+# Models. The RAG LLM uses the larger model on this host.
+ollama_additional_models:
+  - qwen3:8b
+llm_rag_ollama_model: qwen3:8b
+
+# GPU host: CUDA torch wheels (cu124 index).
+callguard_gpu: true
+
+# One download cache root for this host (~/github/.cache holds pip, Hugging Face, Whisper, and Ollama models).
+cache_root: "{{ ansible_env.HOME }}/github/.cache"
+# CallGuard runs as its own service account, which cannot write to the user's cache. Its Hugging Face models
+# live in its own home.
+callguard_hf_home: /home/callguard/.cache/huggingface
+callguard_pip_cache: /home/callguard/.cache/pip
