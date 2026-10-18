@@ -35,9 +35,7 @@
     owner: "{{ item.0.name }}"
     group: "{{ item.0.service_group | default(item.0.name) }}"
     mode: "0755"
-  with_subelements:
-    - "{{ users_all }}"
-    - directories
+  loop: "{{ users_all | subelements('directories', skip_missing=True) }}"
   loop_control:
     label: "{{ item.0.name }}: {{ item.1 }}"
 
@@ -50,7 +48,7 @@
 - name: Check if loginctl exists
   stat:
     path: /bin/loginctl
-  register: loginctl_bin
+  register: users_loginctl_bin
 
 - name: Read lingering state for users that run podman
   command: loginctl show-user {{ item.name }} -p Linger --value

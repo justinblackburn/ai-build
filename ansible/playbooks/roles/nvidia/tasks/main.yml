@@ -1,13 +1,13 @@
 ---
 - name: Detect NVIDIA GPU
   command: lspci
-  register: lspci_output
+  register: nvidia_lspci_output
   changed_when: false
   when: not is_vagrant | default(false)
 
 - name: Set fact if NVIDIA GPU is present
   set_fact:
-    nvidia_gpu_present: "{{ 'NVIDIA' in lspci_output.stdout }}"
+    nvidia_gpu_present: "{{ 'NVIDIA' in nvidia_lspci_output.stdout }}"
   when: not is_vagrant | default(false)
 
 - name: NVIDIA Setup Block
@@ -59,15 +59,15 @@
 
     - name: Check whether nouveau is loaded
       ansible.builtin.command: lsmod
-      register: nouveau_loaded
+      register: nvidia_nouveau_loaded
       changed_when: false
 
     - name: Attempt to unload nouveau module (best effort, only when loaded)
       ansible.builtin.command: modprobe -r nouveau
-      when: "'nouveau' in (nouveau_loaded.stdout | default(''))"
-      register: nouveau_remove
-      changed_when: nouveau_remove.rc == 0
-      failed_when: nouveau_remove.rc not in [0, 1]
+      when: "'nouveau' in (nvidia_nouveau_loaded.stdout | default(''))"
+      register: nvidia_nouveau_remove
+      changed_when: nvidia_nouveau_remove.rc == 0
+      failed_when: nvidia_nouveau_remove.rc not in [0, 1]
       become: true
       ignore_errors: true
 
@@ -152,9 +152,3 @@
           runtime = "nvidia"
       when: nvidia_install_container_toolkit | bool
       become: true
-
-    # - name: Trigger reboot to load NVIDIA drivers
-    #   reboot:
-    #     msg: "Rebooting to activate NVIDIA drivers"
-    #     connect_timeout: 5
-    #     reboot_timeout: 600

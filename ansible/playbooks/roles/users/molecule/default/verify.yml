@@ -1,0 +1,34 @@
+---
+- name: Verify users role
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Service accounts exist with a nologin shell
+      ansible.builtin.command: getent passwd {{ item }}
+      loop: [ollama, callguard]
+      register: users_svc
+      changed_when: false
+
+    - name: Assert the service accounts are nologin system accounts
+      ansible.builtin.assert:
+        that:
+          - "'/usr/sbin/nologin' in item.stdout"
+        fail_msg: "{{ item.item }} is not a nologin account: {{ item.stdout }}"
+      loop: "{{ users_svc.results }}"
+
+    - name: The test user exists
+      ansible.builtin.command: id podtest
+      changed_when: false
+
+    - name: The wheel sudo rule requires a password
+      ansible.builtin.slurp:
+        src: /etc/sudoers.d/wheel_nopasswd
+      register: users_wheel_rule
+      become: true
+
+    - name: Assert no NOPASSWD rule was written
+      ansible.builtin.assert:
+        that:
+          - "'NOPASSWD' not in (users_wheel_rule.content | b64decode)"
+          - "'%wheel ALL=(ALL) ALL' in (users_wheel_rule.content | b64decode)"
+        fail_msg: "wheel sudo rule is not the password-required rule"

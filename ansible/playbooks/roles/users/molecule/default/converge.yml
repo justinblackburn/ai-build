@@ -1,0 +1,14 @@
+---
+- name: Converge users role
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    # One ordinary user that runs rootless podman, so the linger and sudo paths are exercised.
+    users:
+      - name: podtest
+        comment: "molecule test user"
+        shell: /bin/bash
+        enable_podman: true
+  roles:
+    - role: users

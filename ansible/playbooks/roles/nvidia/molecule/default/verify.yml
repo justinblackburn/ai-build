@@ -1,0 +1,15 @@
+---
+- name: Verify nvidia role
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Gather installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert no NVIDIA driver package was installed (the GPU steps are skipped under is_vagrant)
+      ansible.builtin.assert:
+        that:
+          - "'nvidia-driver' not in ansible_facts.packages"
+          - "'kmod-nvidia-open-dkms' not in ansible_facts.packages"
+        fail_msg: "an NVIDIA driver package was installed in the container, so the is_vagrant skip did not apply"

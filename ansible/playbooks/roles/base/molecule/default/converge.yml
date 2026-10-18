@@ -1,0 +1,13 @@
+---
+- name: Converge base role
+  hosts: all
+  gather_facts: true
+  become: true
+  vars:
+    # A container has no subscription to register and no GPU. Both skips are explicit, documented variables:
+    #   base_rhsm_enabled: false skips subscription-manager (registration, CodeReady Builder)
+    #   is_vagrant: true skips the audio-module and GPU-only steps
+    base_rhsm_enabled: false
+    is_vagrant: true
+  roles:
+    - role: base
