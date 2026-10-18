@@ -1,0 +1,22 @@
+---
+# Service accounts every host gets, whatever its inventory lists in `users` (SCRUM-87).
+# Both are system accounts that cannot log in. No password, no wheel membership, no sudo rule.
+users_service_accounts:
+  # Runs the Ollama service. The Ollama installer also creates this account; the role matches its home.
+  # No directories entry: the installer owns /usr/share/ollama (mode 0700).
+  - name: ollama
+    comment: "Ollama service account"
+    shell: /usr/sbin/nologin
+    system: true
+    home: /usr/share/ollama
+    directories: []
+  # Owns the CallGuard venvs and the Hugging Face cache, and runs the smoke checks.
+  - name: callguard
+    comment: "CallGuard model services account"
+    shell: /usr/sbin/nologin
+    system: true
+    home: /home/callguard
+    directories: []
+
+# Extra users from the inventory. Empty by default, so a host that lists none (the VM) still runs (SCRUM-87).
+users: []

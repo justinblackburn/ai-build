@@ -25,11 +25,11 @@ Defined in [defaults/main.yml](defaults/main.yml) and overrideable in inventory:
 
 ```yaml
 # Service account
-whisper_user: sd-data
-whisper_group: sd-data
+whisper_user: callguard
+whisper_group: callguard
 
 # Paths
-whisper_data_dir: /home/sd-data/data
+whisper_data_dir: /home/callguard/whisper
 whisper_venv: "{{ whisper_data_dir }}/venv"         # Shared with stable_diffusion role
 whisper_cache_home: "/home/{{ whisper_user }}/.cache"
 whisper_cache_dir: "{{ whisper_cache_home }}/whisper"

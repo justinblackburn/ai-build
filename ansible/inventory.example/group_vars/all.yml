@@ -19,7 +19,9 @@ sd_webui_data_dir: "/home/sd-data/data"
 nvidia_driver_url: "https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run"
 nvidia_driver_file: "{{ nvidia_driver_url | basename }}"
 
-# Service accounts and users created by the users role. The sd-data account is removed with Stable Diffusion.
+# Service accounts and users created by the users role. The ollama and callguard
+# accounts come from the role's users_service_accounts default; do not list them here.
+# The sd-data account is removed with Stable Diffusion.
 users: []
 
 # Local RAG stack configuration

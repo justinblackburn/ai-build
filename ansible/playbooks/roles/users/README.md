@@ -19,6 +19,19 @@ The `users` role manages system identities and permissions:
 
 ---
 
+## Service accounts (SCRUM-87)
+
+`defaults/main.yml` defines `users_service_accounts`, created on every host in addition to the inventory `users` list:
+
+| Account | Home | Purpose |
+|---------|------|---------|
+| `ollama` | `/usr/share/ollama` | Runs the Ollama service (`User=ollama`, `Group=ollama`) |
+| `callguard` | `/home/callguard` | Owns the CallGuard venvs and Hugging Face cache, runs the smoke checks |
+
+Both are system accounts with `/usr/sbin/nologin`, no password and no wheel membership. The sudo rule below is unchanged.
+
+---
+
 ## Variables
 
 The role consumes the global `users` list from inventory. No role-specific defaults file.
