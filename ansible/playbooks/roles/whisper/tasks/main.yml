@@ -23,6 +23,8 @@
       - openai-whisper
       - yt-dlp
     virtualenv: "{{ whisper_venv }}"
+  environment:
+    PIP_CACHE_DIR: "{{ cache_root }}/pip"
 
 - name: Ensure Whisper cache directory exists
   ansible.builtin.file:
