@@ -133,7 +133,7 @@
     - name: Add NVIDIA Container Toolkit repo
       ansible.builtin.get_url:
         url: "{{ nvidia_container_repo_url }}"
-        dest: /etc/yum.repos.d/libnvidia-container.repo
+        dest: /etc/yum.repos.d/nvidia-container-toolkit.repo
       when: nvidia_install_container_toolkit | bool
       become: true
 
